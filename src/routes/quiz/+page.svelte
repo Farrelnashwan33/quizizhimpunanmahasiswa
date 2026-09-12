@@ -53,12 +53,6 @@
 	let confirmSubmitOpen = $state(false);
 	let isSubmitting = $state(false);
 
-	// Anti-Cheat & Tab Switch State
-	let tabSwitchCount = $state(0);
-	const maxViolations = 3;
-	let cheatWarningOpen = $state(false);
-	let cheatWarningMessage = $state('');
-
 	// Quiz Result State
 	let quizResult = $state<any>(null);
 	let showDetailedReview = $state(false);
@@ -68,50 +62,6 @@
 		Object.values(answers).filter((a) => a && a.trim() !== '').length
 	);
 	const isAllAnswered = $derived(answeredCount === totalQuestions);
-
-	function playAlarmSound() {
-		try {
-			const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-			if (!AudioCtx) return;
-			const ctx = new AudioCtx();
-			const now = ctx.currentTime;
-
-			// 3 High-pitch Warning Siren Pulses
-			for (let i = 0; i < 3; i++) {
-				const osc = ctx.createOscillator();
-				const gain = ctx.createGain();
-
-				osc.type = 'sawtooth';
-				osc.frequency.setValueAtTime(880, now + i * 0.28);
-				osc.frequency.exponentialRampToValueAtTime(440, now + i * 0.28 + 0.22);
-
-				gain.gain.setValueAtTime(0.35, now + i * 0.28);
-				gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.28 + 0.22);
-
-				osc.connect(gain);
-				gain.connect(ctx.destination);
-
-				osc.start(now + i * 0.28);
-				osc.stop(now + i * 0.28 + 0.25);
-			}
-		} catch (e) {}
-	}
-
-	async function reportViolationToAdmin(count: number, msg: string) {
-		try {
-			fetch('/api/quiz/violation', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					studentName,
-					nim,
-					programStudi,
-					violationCount: count,
-					message: msg
-				})
-			}).catch(() => {});
-		} catch (e) {}
-	}
 
 	// Anti-Cheat Event Handlers & LocalStorage Setup
 	onMount(() => {
@@ -134,30 +84,7 @@
 			}
 		} catch (e) {}
 
-		// 1. Tab Switch & Visibility Change Detection
-		const handleVisibilityChange = () => {
-			if (document.hidden && isIdentitySubmitted && !quizResult && !isSubmitting) {
-				tabSwitchCount++;
-				cheatWarningOpen = true;
-
-				// Play Warning Alarm Siren Sound
-				playAlarmSound();
-
-				let msg = '';
-				if (tabSwitchCount >= maxViolations) {
-					msg = `Anda telah keluar/pindah tab sebanyak ${tabSwitchCount} kali (batas toleransi ${maxViolations} kali terlampaui). Kuis Anda otomatis dikumpulkan oleh sistem pengawas!`;
-					cheatWarningMessage = msg;
-					reportViolationToAdmin(tabSwitchCount, msg);
-					handleSubmitQuiz(true);
-				} else {
-					msg = `PERINGATAN SISTEM PENGAWAS: Anda terdeteksi membuka tab baru atau berpindah aplikasi! (Pelanggaran ke-${tabSwitchCount} dari batas maksimal ${maxViolations} kali). Jika mengulangi, kuis akan otomatis dikumpulkan dan nilai terkunci!`;
-					cheatWarningMessage = msg;
-					reportViolationToAdmin(tabSwitchCount, msg);
-				}
-			}
-		};
-
-		// 2. Prevent Copy, Cut, Paste & Right Click
+		// 1. Prevent Copy, Cut, Paste & Right Click
 		const handleCopy = (e: ClipboardEvent) => {
 			if (isIdentitySubmitted && !quizResult) {
 				e.preventDefault();
@@ -172,7 +99,7 @@
 			}
 		};
 
-		// 3. Block Shortcuts (Ctrl+C, Ctrl+V, Ctrl+U, F12)
+		// 2. Block Shortcuts (Ctrl+C, Ctrl+V, Ctrl+U, F12)
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (isIdentitySubmitted && !quizResult) {
 				if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'u', 'a', 'p'].includes(e.key.toLowerCase())) {
@@ -185,7 +112,7 @@
 			}
 		};
 
-		// 4. Warn on Page Reload/Close
+		// 3. Warn on Page Reload/Close
 		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 			if (isIdentitySubmitted && !quizResult) {
 				e.preventDefault();
@@ -193,14 +120,12 @@
 			}
 		};
 
-		document.addEventListener('visibilitychange', handleVisibilityChange);
 		document.addEventListener('copy', handleCopy);
 		document.addEventListener('contextmenu', handleContextMenu);
 		document.addEventListener('keydown', handleKeyDown);
 		window.addEventListener('beforeunload', handleBeforeUnload);
 
 		return () => {
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			document.removeEventListener('copy', handleCopy);
 			document.removeEventListener('contextmenu', handleContextMenu);
 			document.removeEventListener('keydown', handleKeyDown);
@@ -263,7 +188,7 @@
 		}
 	}
 
-	async function handleSubmitQuiz(isAuto = false) {
+	async function handleSubmitQuiz() {
 		isSubmitting = true;
 		confirmSubmitOpen = false;
 
@@ -276,8 +201,7 @@
 					nim,
 					programStudi,
 					whatsapp,
-					answers,
-					tabSwitchCount
+					answers
 				})
 			});
 
@@ -299,11 +223,7 @@
 					} catch (e) {}
 				}
 
-				if (isAuto) {
-					toasts.error('Kuis otomatis dikumpulkan karena terdeteksi pelanggaran pindah tab.');
-				} else {
-					toasts.success('Quiz berhasil dikirim dan nilai telah dihitung!');
-				}
+				toasts.success('Quiz berhasil dikirim dan nilai telah dihitung!');
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			} else {
 				toasts.error(data.error || 'Gagal mengirim quiz.');
@@ -320,7 +240,6 @@
 		answers = {};
 		quizResult = null;
 		currentIndex = 0;
-		tabSwitchCount = 0;
 		showDetailedReview = false;
 		try {
 			localStorage.removeItem('quiz_fst_answers');
@@ -444,17 +363,10 @@
 								{studentName}
 							</span>
 							<Badge variant="emerald" size="sm" class="text-[10px] sm:text-xs">NIM: {nim}</Badge>
-							{#if tabSwitchCount > 0}
-								<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold bg-rose-100 text-rose-700 border border-rose-300 px-1.5 sm:px-2 py-0.5 rounded-full animate-pulse">
-									<AlertTriangle class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-									Pindah Tab: {tabSwitchCount}/3
-								</span>
-							{:else}
-								<span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-									<ShieldAlert class="w-3 h-3 text-emerald-600" />
-									Pengawas Aktif
-								</span>
-							{/if}
+							<span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+								<BookOpen class="w-3 h-3 text-emerald-600" />
+								Kaderisasi I
+							</span>
 						</div>
 						<div class="text-[11px] sm:text-xs text-slate-500 truncate">
 							Soal {currentIndex + 1} dari {totalQuestions} • {programStudi}
@@ -863,44 +775,5 @@
 	cancelText="Periksa Lagi"
 	variant={isAllAnswered ? 'primary' : 'danger'}
 	loading={isSubmitting}
-	onconfirm={() => handleSubmitQuiz(false)}
+	onconfirm={() => handleSubmitQuiz()}
 />
-
-<!-- Anti-Cheat / Tab Switch Alert Modal -->
-<Modal bind:open={cheatWarningOpen} title="⚠️ Peringatan Pengawas Ujian Daring" maxWidth="md">
-	<div class="space-y-4 py-2 text-center">
-		<div class="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto ring-8 ring-rose-50 animate-bounce">
-			<ShieldAlert class="w-8 h-8" />
-		</div>
-
-		<div>
-			<h3 class="text-base font-bold text-slate-900">
-				Terdeteksi Meninggalkan Halaman / Buka Tab Baru!
-			</h3>
-			<p class="text-xs text-slate-600 mt-2 leading-relaxed">
-				{cheatWarningMessage}
-			</p>
-		</div>
-
-		<div class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs font-semibold text-rose-800 flex items-center justify-between">
-			<span>Status Pelanggaran:</span>
-			<span class="font-black text-sm">{tabSwitchCount} / {maxViolations} Kali</span>
-		</div>
-
-		<p class="text-[11px] text-slate-400">
-			Seluruh aktivitas perpindahan tab terekam di sistem pengawas panitia Kaderisasi HIMA FST UT Bandung.
-		</p>
-	</div>
-
-	{#snippet footer()}
-		{#if tabSwitchCount >= maxViolations}
-			<Button variant="danger" size="md" fullWidth loading={isSubmitting} onclick={() => handleSubmitQuiz(true)}>
-				<span>Kuis Dikumpulkan Otomatis</span>
-			</Button>
-		{:else}
-			<Button variant="danger" size="md" fullWidth onclick={() => cheatWarningOpen = false}>
-				<span>Saya Mengerti & Kembali ke Soal</span>
-			</Button>
-		{/if}
-	{/snippet}
-</Modal>

@@ -2,6 +2,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import logoHima from '$lib/assets/logo-hima.png';
 	import {
 		GraduationCap,
 		BookOpen,
@@ -85,7 +86,7 @@
 		<div class="text-center max-w-3xl mx-auto">
 			<!-- Header Badge -->
 			<div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-emerald-200/80 text-emerald-800 text-xs font-bold mb-6 shadow-xs animate-in fade-in slide-in-from-bottom-3 duration-500">
-				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-5 h-5 object-contain" />
+				<img src={logoHima} alt="Logo HIMA FST UT" class="w-5 h-5 object-contain" />
 				<span>HIMPUNAN MAHASISWA FAKULTAS SAINS DAN TEKNOLOGI UNIVERSITAS TERBUKA</span>
 			</div>
 

@@ -2,15 +2,16 @@
 	import { page } from '$app/state';
 	import Button from './ui/Button.svelte';
 	import Badge from './ui/Badge.svelte';
+	import logoHima from '$lib/assets/logo-hima.png';
 	import { 
 		GraduationCap, 
 		LogOut, 
 		User, 
 		ShieldCheck, 
 		BookOpen, 
-		Home,
-		Menu,
-		X
+		Home, 
+		Menu, 
+		X 
 	} from 'lucide-svelte';
 
 	interface Props {
@@ -27,7 +28,7 @@
 		<!-- Brand & Logo -->
 		<a href="/" class="flex items-center gap-3 group">
 			<div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-emerald-700/10 border border-slate-200/80 group-hover:scale-105 transition-transform overflow-hidden shrink-0">
-				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
+				<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<div>
 				<div class="flex items-center gap-2">

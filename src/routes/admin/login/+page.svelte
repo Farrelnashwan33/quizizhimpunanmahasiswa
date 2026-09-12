@@ -4,6 +4,7 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import logoHima from '$lib/assets/logo-hima.png';
 	import { ShieldCheck, Mail, Lock, LogIn, ArrowLeft } from 'lucide-svelte';
 
 	let { form } = $props();
@@ -19,7 +20,7 @@
 		<!-- Header -->
 		<div class="text-center mb-8">
 			<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white p-2 border border-slate-700 shadow-xl mb-4 overflow-hidden">
-				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
+				<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<Badge variant="emerald" size="md" class="mb-3">Portal Khusus Pengurus</Badge>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">

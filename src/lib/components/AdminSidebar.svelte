@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import logoHima from '$lib/assets/logo-hima.png';
 	import {
 		LayoutDashboard,
 		Users,
@@ -40,7 +41,7 @@
 		<!-- Header -->
 		<div class="px-2 py-1 flex items-center gap-3 border-b border-slate-800 pb-4">
 			<div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center border border-slate-700 shadow-sm overflow-hidden shrink-0">
-				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
+				<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<div>
 				<h3 class="text-sm font-bold text-white tracking-tight">Admin Pengurus</h3>

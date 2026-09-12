@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { GraduationCap, Heart, Shield } from 'lucide-svelte';
+	import { Heart, Shield } from 'lucide-svelte';
+	import logoHima from '$lib/assets/logo-hima.png';
 </script>
 
-<footer class="mt-auto border-t border-slate-200/80 bg-white">
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+<footer class="mt-auto border-t border-slate-200/80 bg-white/50 backdrop-blur-xs py-12 text-slate-600">
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 		<div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
 			<!-- Col 1 -->
 			<div class="md:col-span-2 space-y-3">
 				<div class="flex items-center gap-3">
 					<div class="w-8 h-8 rounded-lg bg-white p-0.5 flex items-center justify-center border border-slate-200 overflow-hidden shadow-xs shrink-0">
-						<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
+						<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 					</div>
 					<span class="font-bold text-slate-900 text-base">HIMA FST UT Bandung</span>
 				</div>

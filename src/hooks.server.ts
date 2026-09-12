@@ -79,6 +79,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const path = event.url.pathname;
+	const host = event.url.hostname.toLowerCase();
+
+	// Smart Subdomain Routing: If user visits via admin.* domain/subdomain, route root / to admin panel
+	if ((host.startsWith('admin.') || host.startsWith('admin-')) && path === '/') {
+		if (event.locals.user && event.locals.profile?.role === 'admin') {
+			throw redirect(303, '/admin/peserta');
+		} else {
+			throw redirect(303, '/admin/login');
+		}
+	}
+
+	// Direct root /admin redirect
+	if (path === '/admin') {
+		if (event.locals.user && event.locals.profile?.role === 'admin') {
+			throw redirect(303, '/admin/peserta');
+		} else {
+			throw redirect(303, '/admin/login');
+		}
+	}
 
 	// 1. Admin Routes Protection (/admin/...)
 	if (path.startsWith('/admin')) {

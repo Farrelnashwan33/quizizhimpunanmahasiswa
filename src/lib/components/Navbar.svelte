@@ -51,10 +51,6 @@
 				<Button href="/quiz" variant="primary" size="sm">
 					Mulai Quiz
 				</Button>
-				<Button href="/admin/login" variant="ghost" size="sm" class="text-slate-600">
-					<ShieldCheck class="w-4 h-4 mr-1.5" />
-					Admin Pengurus
-				</Button>
 			{:else}
 				{#if profile?.role === 'admin'}
 					<a href="/admin/dashboard" class="px-3.5 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 rounded-xl transition-all flex items-center gap-1.5">
@@ -116,12 +112,6 @@
 				<div class="pt-2">
 					<Button href="/quiz" variant="primary" size="sm" fullWidth onclick={() => mobileMenuOpen = false}>
 						Mulai Kerjakan Quiz
-					</Button>
-				</div>
-				<div class="pt-1">
-					<Button href="/admin/login" variant="ghost" size="sm" fullWidth onclick={() => mobileMenuOpen = false}>
-						<ShieldCheck class="w-4 h-4 mr-1.5" />
-						Portal Admin Pengurus
 					</Button>
 				</div>
 			{:else}

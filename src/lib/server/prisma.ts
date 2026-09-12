@@ -26,10 +26,7 @@ function getPrismaClient(): PrismaClient {
 				log: ['error']
 			});
 
-	if (dev) {
-		globalForPrisma.prisma = client;
-	}
-
+	globalForPrisma.prisma = client;
 	return client;
 }
 

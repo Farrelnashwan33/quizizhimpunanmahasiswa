@@ -1,59 +1,84 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { prisma } from '$lib/server/prisma';
+import { prisma, isDatabaseConfigured } from '$lib/server/prisma';
+import { getAllAttempts } from '$lib/server/participantStore';
+import { OFFICIAL_30_QUESTIONS } from '$lib/data/questions';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const attemptId = params.attemptId;
 
-	try {
-		const attempt = await prisma.quizAttempt.findUnique({
-			where: { id: attemptId },
-			include: {
-				student: true,
-				quiz: true,
-				answers: {
-					include: {
-						question: true
+	if (isDatabaseConfigured && attemptId.includes('-') && attemptId.length === 36) {
+		try {
+			const attempt = await prisma.quizAttempt.findUnique({
+				where: { id: attemptId },
+				include: {
+					student: true,
+					quiz: true,
+					answers: {
+						include: {
+							question: true
+						}
 					}
 				}
+			});
+
+			if (attempt) {
+				const allQuestions = await prisma.question.findMany({
+					where: { quizId: attempt.quizId },
+					orderBy: { questionNumber: 'asc' }
+				});
+
+				const answerMap = new Map();
+				for (const a of attempt.answers) {
+					answerMap.set(a.questionId, a);
+				}
+
+				const detailedQuestions = allQuestions.map((q) => {
+					const ans = answerMap.get(q.id);
+					return {
+						question: q,
+						studentAnswer: ans?.selectedAnswer || null,
+						isCorrect: ans?.isCorrect ?? false,
+						answeredAt: ans?.answeredAt || null
+					};
+				});
+
+				return {
+					attempt,
+					student: attempt.student,
+					quiz: attempt.quiz,
+					detailedQuestions
+				};
 			}
+		} catch (err: any) {
+			console.warn('Error loading attempt detail from DB, checking memory store:', err);
+		}
+	}
+
+	// Fallback to participantStore
+	const memoryList = getAllAttempts();
+	const memAttempt = memoryList.find((a) => a.id === attemptId || a.student.nim === attemptId);
+
+	if (memAttempt) {
+		const detailedQuestions = OFFICIAL_30_QUESTIONS.map((q) => {
+			const ans = memAttempt.answers?.find(
+				(a) => a.questionId === q.id || a.questionNumber === q.questionNumber
+			);
+			return {
+				question: q,
+				studentAnswer: ans?.studentAnswer || null,
+				isCorrect: ans?.isCorrect ?? false,
+				answeredAt: memAttempt.submittedAt
+			};
 		});
 
-		if (!attempt) {
-			throw error(404, 'Data pengerjaan peserta tidak ditemukan');
-		}
-
-	// Also fetch all questions to show any unanswered ones properly
-	const allQuestions = await prisma.question.findMany({
-		where: { quizId: attempt.quizId },
-		orderBy: { questionNumber: 'asc' }
-	});
-
-	// Map answers by questionId
-	const answerMap = new Map();
-	for (const a of attempt.answers) {
-		answerMap.set(a.questionId, a);
-	}
-
-	// Build composite question-answer list 1 to 30
-	const detailedQuestions = allQuestions.map((q) => {
-		const ans = answerMap.get(q.id);
 		return {
-			question: q,
-			studentAnswer: ans?.selectedAnswer || null,
-			isCorrect: ans?.isCorrect ?? false,
-			answeredAt: ans?.answeredAt || null
-		};
-	});
-
-		return {
-			attempt,
-			student: attempt.student,
-			quiz: attempt.quiz,
+			attempt: memAttempt,
+			student: memAttempt.student,
+			quiz: memAttempt.quiz,
 			detailedQuestions
 		};
-	} catch (err: any) {
-		console.error('Error loading attempt detail:', err);
-		throw error(404, 'Data pengerjaan peserta tidak ditemukan atau database belum terhubung');
 	}
+
+	throw error(404, 'Data pengerjaan peserta tidak ditemukan.');
 };

@@ -3,7 +3,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { BarChart3, Award, CheckCircle2, XCircle, TrendingUp, Compass, Flame, Sparkles, Users, Lightbulb } from 'lucide-svelte';
+	import { BarChart3, Award, CheckCircle2, XCircle, TrendingUp, Compass, Flame, Sparkles, Users, Lightbulb, Download } from 'lucide-svelte';
 
 	let { data } = $props();
 	const totalCompleted = $derived(data.totalCompleted || 0);
@@ -43,6 +43,18 @@
 			<p class="text-xs sm:text-sm text-slate-400 mt-1">
 				Persentase kelulusan kaderisasi dan tingkat penguasaan per kategori materi (A–F).
 			</p>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<a
+				href="/admin/peserta/export"
+				data-sveltekit-reload
+				download="Rekap_Nilai_Quiz_Kaderisasi_HIMA_FST.csv"
+				class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+			>
+				<Download class="w-4 h-4 mr-2" />
+				<span>Download Rekap Nilai (CSV)</span>
+			</a>
 		</div>
 	</div>
 

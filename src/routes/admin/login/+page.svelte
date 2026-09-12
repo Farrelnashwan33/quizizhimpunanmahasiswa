@@ -5,7 +5,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import logoHima from '$lib/assets/logo-hima.png';
-	import { ShieldCheck, Mail, Lock, LogIn, ArrowLeft } from 'lucide-svelte';
+	import { ShieldCheck, Mail, Lock, LogIn } from 'lucide-svelte';
 
 	let { form } = $props();
 	let loading = $state(false);
@@ -109,13 +109,6 @@
 					</Button>
 				</div>
 			</form>
-
-			<div class="mt-6 pt-6 border-t border-slate-800 text-center">
-				<a href="/" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors">
-					<ArrowLeft class="w-3.5 h-3.5" />
-					Kembali ke Beranda
-				</a>
-			</div>
 		</div>
 
 		<div class="mt-6 text-center text-xs text-slate-500">

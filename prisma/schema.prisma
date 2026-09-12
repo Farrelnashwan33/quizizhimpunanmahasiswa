@@ -1,0 +1,107 @@
+// Prisma Schema untuk Quiz Kaderisasi Tingkat I HIMA FST UT Bandung
+// Terintegrasi dengan Supabase PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  mahasiswa
+  admin
+}
+
+enum AttemptStatus {
+  in_progress
+  completed
+  timed_out
+}
+
+model Profile {
+  id           String        @id @db.Uuid
+  fullName     String        @map("full_name")
+  nim          String        @unique
+  email        String        @unique
+  programStudi String        @map("program_studi")
+  whatsapp     String?       @map("whatsapp")
+  role         Role          @default(mahasiswa)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  attempts     QuizAttempt[]
+
+  @@map("profiles")
+}
+
+model Quiz {
+  id              String        @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?       @db.Text
+  durationMinutes Int           @default(60) @map("duration_minutes")
+  isActive        Boolean       @default(true) @map("is_active")
+  showResult      Boolean       @default(true) @map("show_result")
+  allowRetry      Boolean       @default(false) @map("allow_retry")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  questions       Question[]
+  attempts        QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model Question {
+  id             String   @id @default(uuid()) @db.Uuid
+  quizId         String   @map("quiz_id") @db.Uuid
+  quiz           Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionNumber Int      @map("question_number")
+  section        String
+  questionText   String   @map("question_text") @db.Text
+  optionA        String   @map("option_a") @db.Text
+  optionB        String   @map("option_b") @db.Text
+  optionC        String   @map("option_c") @db.Text
+  optionD        String   @map("option_d") @db.Text
+  correctAnswer  String   @map("correct_answer")
+  explanation    String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  answers        Answer[]
+
+  @@unique([quizId, questionNumber])
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id             String        @id @default(uuid()) @db.Uuid
+  quizId         String        @map("quiz_id") @db.Uuid
+  quiz           Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId      String        @map("student_id") @db.Uuid
+  student        Profile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startedAt      DateTime      @default(now()) @map("started_at")
+  submittedAt    DateTime?     @map("submitted_at")
+  status         AttemptStatus @default(in_progress)
+  score          Float?
+  correctCount   Int           @default(0) @map("correct_count")
+  wrongCount     Int           @default(0) @map("wrong_count")
+  totalQuestions Int           @default(30) @map("total_questions")
+  answers        Answer[]
+
+  @@map("quiz_attempts")
+}
+
+model Answer {
+  id             String      @id @default(uuid()) @db.Uuid
+  attemptId      String      @map("attempt_id") @db.Uuid
+  attempt        QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId     String      @map("question_id") @db.Uuid
+  question       Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedAnswer String?     @map("selected_answer")
+  isCorrect      Boolean?    @map("is_correct")
+  answeredAt     DateTime    @default(now()) @map("answered_at")
+
+  @@unique([attemptId, questionId])
+  @@map("answers")
+}

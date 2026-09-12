@@ -431,47 +431,47 @@
 	<!-- STATE 2: MENGERJAKAN 30 SOAL QUIZ -->
 	{:else if !quizResult}
 		<!-- Sticky Quiz Header -->
-		<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 py-3.5 shadow-xs">
-			<div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+		<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 shadow-xs">
+			<div class="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
 				<!-- Student Info & Title -->
-				<div class="flex items-center gap-3">
-					<div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center border border-slate-200 shadow-xs overflow-hidden shrink-0">
+				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+					<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white p-0.5 sm:p-1 flex items-center justify-center border border-slate-200 shadow-xs overflow-hidden shrink-0">
 						<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 					</div>
-					<div>
-						<div class="flex items-center gap-2">
-							<span class="font-bold text-sm sm:text-base text-slate-900 line-clamp-1">
+					<div class="min-w-0">
+						<div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+							<span class="font-bold text-xs sm:text-base text-slate-900 truncate max-w-[110px] sm:max-w-none">
 								{studentName}
 							</span>
-							<Badge variant="emerald" size="sm">NIM: {nim}</Badge>
+							<Badge variant="emerald" size="sm" class="text-[10px] sm:text-xs">NIM: {nim}</Badge>
 							{#if tabSwitchCount > 0}
-								<span class="inline-flex items-center gap-1 text-xs font-bold bg-rose-100 text-rose-700 border border-rose-300 px-2 py-0.5 rounded-full animate-pulse">
-									<AlertTriangle class="w-3 h-3" />
+								<span class="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold bg-rose-100 text-rose-700 border border-rose-300 px-1.5 sm:px-2 py-0.5 rounded-full animate-pulse">
+									<AlertTriangle class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
 									Pindah Tab: {tabSwitchCount}/3
 								</span>
 							{:else}
-								<span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+								<span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
 									<ShieldAlert class="w-3 h-3 text-emerald-600" />
 									Pengawas Aktif
 								</span>
 							{/if}
 						</div>
-						<div class="text-xs text-slate-500">
-							Prodi: {programStudi} • Soal {currentIndex + 1} dari {totalQuestions}
+						<div class="text-[11px] sm:text-xs text-slate-500 truncate">
+							Soal {currentIndex + 1} dari {totalQuestions} • {programStudi}
 						</div>
 					</div>
 				</div>
 
 				<!-- Actions -->
-				<div class="flex items-center gap-2">
-					<Button variant="outline" size="sm" onclick={() => reviewModalOpen = true}>
+				<div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+					<Button variant="outline" size="sm" class="px-2 sm:px-3 text-xs" onclick={() => reviewModalOpen = true}>
 						<ListCheck class="w-4 h-4 sm:mr-1.5" />
 						<span class="hidden sm:inline">Review ({answeredCount}/{totalQuestions})</span>
 					</Button>
 
-					<Button variant="primary" size="sm" onclick={() => confirmSubmitOpen = true} loading={isSubmitting}>
-						<Send class="w-3.5 h-3.5 mr-1.5" />
-						<span>Kirim Quiz</span>
+					<Button variant="primary" size="sm" class="px-2.5 sm:px-3.5 text-xs font-bold" onclick={() => confirmSubmitOpen = true} loading={isSubmitting}>
+						<Send class="w-3.5 h-3.5 mr-1" />
+						<span>Selesai</span>
 					</Button>
 				</div>
 			</div>

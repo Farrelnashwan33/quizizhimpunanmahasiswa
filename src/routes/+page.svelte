@@ -82,42 +82,42 @@
 	<div class="absolute top-96 -left-40 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
 	<!-- Hero Section -->
-	<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 lg:pt-20 lg:pb-28">
+	<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 sm:pt-12 sm:pb-20 lg:pt-20 lg:pb-28">
 		<div class="text-center max-w-3xl mx-auto">
 			<!-- Header Badge -->
-			<div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-emerald-200/80 text-emerald-800 text-xs font-bold mb-6 shadow-xs animate-in fade-in slide-in-from-bottom-3 duration-500">
-				<img src={logoHima} alt="Logo HIMA FST UT" class="w-5 h-5 object-contain" />
-				<span>HIMPUNAN MAHASISWA FAKULTAS SAINS DAN TEKNOLOGI UNIVERSITAS TERBUKA</span>
+			<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-emerald-200/80 text-emerald-800 text-[10px] sm:text-xs font-bold mb-5 shadow-xs max-w-full">
+				<img src={logoHima} alt="Logo HIMA FST UT" class="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" />
+				<span class="truncate">HIMA FAKULTAS SAINS DAN TEKNOLOGI UNIVERSITAS TERBUKA</span>
 			</div>
 
 			<!-- Main Title -->
-			<h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight sm:leading-none mb-6">
-				Quiz Kaderisasi <span class="text-emerald-600">Tingkat I</span>
+			<h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight sm:leading-none mb-4 sm:mb-6">
+				Quiz Kaderisasi <span class="text-emerald-600 block sm:inline">Tingkat I</span>
 			</h1>
 
 			<!-- Subtitle -->
-			<p class="text-lg sm:text-xl font-semibold text-emerald-700 mb-4">
+			<p class="text-base sm:text-xl font-semibold text-emerald-700 mb-3 sm:mb-4 px-2">
 				"Uji Pemahaman, Bangun Karakter, dan Siap Berkontribusi."
 			</p>
 
 			<!-- Description -->
-			<p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto mb-10">
+			<p class="text-xs sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8 sm:mb-10 px-2">
 				Platform evaluasi interaktif daring untuk mengukur pemahaman nilai-nilai dasar kepemimpinan, Tridharma Perguruan Tinggi, dan etika sains teknologi bagi seluruh calon kader HIMA FST Universitas Terbuka Bandung.
 			</p>
 
 			<!-- Action Buttons -->
-			<div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto">
-				<Button href="/quiz" variant="primary" size="lg" fullWidth class="shadow-lg shadow-emerald-600/30 text-base font-bold py-4">
+			<div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto w-full px-2">
+				<Button href="/quiz" variant="primary" size="lg" fullWidth class="shadow-lg shadow-emerald-600/30 text-sm sm:text-base font-bold py-3.5 sm:py-4">
 					<span>Mulai Quiz Sekarang (Isi Nama & NIM)</span>
-					<ArrowRight class="w-5 h-5 ml-2" />
+					<ArrowRight class="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
 				</Button>
 			</div>
 
-			<div class="mt-5 flex items-center justify-center gap-4 text-xs">
+			<div class="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs">
 				<a href="/quiz" class="text-emerald-700 font-semibold hover:underline">
 					Langsung Kerjakan (Tanpa Perlu Login)
 				</a>
-				<span class="text-slate-300">•</span>
+				<span class="text-slate-300 hidden sm:inline">•</span>
 				<a href="https://hima-fst.vercel.app/login" class="inline-flex items-center gap-1.5 text-slate-500 hover:text-emerald-700 transition-colors font-medium">
 					<Users class="w-3.5 h-3.5 text-emerald-600" />
 					Portal Mahasiswa
@@ -126,7 +126,7 @@
 		</div>
 
 		<!-- 4 Key Information Cards -->
-		<div class="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+		<div class="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
 			<!-- Card 1 -->
 			<Card glass hover class="flex items-start gap-4">
 				<div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">

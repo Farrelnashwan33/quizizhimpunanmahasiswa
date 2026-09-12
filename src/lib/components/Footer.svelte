@@ -7,9 +7,9 @@
 		<div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
 			<!-- Col 1 -->
 			<div class="md:col-span-2 space-y-3">
-				<div class="flex items-center gap-2.5">
-					<div class="w-8 h-8 rounded-lg emerald-gradient flex items-center justify-center text-white font-bold">
-						<GraduationCap class="w-4 h-4" />
+				<div class="flex items-center gap-3">
+					<div class="w-8 h-8 rounded-lg bg-white p-0.5 flex items-center justify-center border border-slate-200 overflow-hidden shadow-xs shrink-0">
+						<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 					</div>
 					<span class="font-bold text-slate-900 text-base">HIMA FST UT Bandung</span>
 				</div>

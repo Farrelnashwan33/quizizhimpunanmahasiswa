@@ -84,8 +84,8 @@
 	<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 lg:pt-20 lg:pb-28">
 		<div class="text-center max-w-3xl mx-auto">
 			<!-- Header Badge -->
-			<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold mb-6 shadow-xs animate-in fade-in slide-in-from-bottom-3 duration-500">
-				<GraduationCap class="w-4 h-4 text-emerald-600" />
+			<div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-emerald-200/80 text-emerald-800 text-xs font-bold mb-6 shadow-xs animate-in fade-in slide-in-from-bottom-3 duration-500">
+				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-5 h-5 object-contain" />
 				<span>HIMPUNAN MAHASISWA FAKULTAS SAINS DAN TEKNOLOGI UNIVERSITAS TERBUKA</span>
 			</div>
 

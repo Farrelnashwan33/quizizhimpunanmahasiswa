@@ -21,8 +21,8 @@
 	<div class="max-w-md w-full">
 		<!-- Header -->
 		<div class="text-center mb-8">
-			<div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl emerald-gradient text-white shadow-lg shadow-emerald-600/20 mb-4">
-				<GraduationCap class="w-8 h-8" />
+			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white p-1.5 border border-slate-200 shadow-lg shadow-emerald-600/10 mb-4 overflow-hidden">
+				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<Badge variant="emerald" size="md" class="mb-3">Portal Mahasiswa</Badge>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">

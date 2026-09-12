@@ -18,8 +18,8 @@
 	<div class="max-w-md w-full">
 		<!-- Header -->
 		<div class="text-center mb-8">
-			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800 text-emerald-400 border border-slate-700 shadow-xl mb-4">
-				<ShieldCheck class="w-8 h-8" />
+			<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white p-2 border border-slate-700 shadow-xl mb-4 overflow-hidden">
+				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<Badge variant="emerald" size="md" class="mb-3">Portal Khusus Pengurus</Badge>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">

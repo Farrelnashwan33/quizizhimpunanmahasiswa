@@ -339,8 +339,8 @@
 			<div class="max-w-lg w-full">
 				<!-- Header -->
 				<div class="text-center mb-8">
-					<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl emerald-gradient text-white shadow-xl shadow-emerald-600/20 mb-4">
-						<GraduationCap class="w-8 h-8" />
+					<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white p-2 border border-slate-200 shadow-xl shadow-emerald-600/10 mb-4 overflow-hidden">
+						<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 					</div>
 					<Badge variant="emerald" size="md" class="mb-3">Kaderisasi Tingkat I</Badge>
 					<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -434,8 +434,8 @@
 			<div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
 				<!-- Student Info & Title -->
 				<div class="flex items-center gap-3">
-					<div class="w-9 h-9 rounded-xl emerald-gradient flex items-center justify-center text-white font-bold text-xs shrink-0">
-						<GraduationCap class="w-5 h-5" />
+					<div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center border border-slate-200 shadow-xs overflow-hidden shrink-0">
+						<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 					</div>
 					<div>
 						<div class="flex items-center gap-2">

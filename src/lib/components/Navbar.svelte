@@ -26,8 +26,8 @@
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 		<!-- Brand & Logo -->
 		<a href="/" class="flex items-center gap-3 group">
-			<div class="w-10 h-10 rounded-xl emerald-gradient flex items-center justify-center text-white shadow-md shadow-emerald-700/20 group-hover:scale-105 transition-transform">
-				<GraduationCap class="w-5 h-5" />
+			<div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-emerald-700/10 border border-slate-200/80 group-hover:scale-105 transition-transform overflow-hidden shrink-0">
+				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<div>
 				<div class="flex items-center gap-2">

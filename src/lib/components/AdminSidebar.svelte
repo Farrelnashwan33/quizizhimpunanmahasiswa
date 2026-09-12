@@ -39,8 +39,8 @@
 	<div class="space-y-6">
 		<!-- Header -->
 		<div class="px-2 py-1 flex items-center gap-3 border-b border-slate-800 pb-4">
-			<div class="w-9 h-9 rounded-xl emerald-gradient flex items-center justify-center text-white font-bold">
-				<ShieldCheck class="w-5 h-5" />
+			<div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center border border-slate-700 shadow-sm overflow-hidden shrink-0">
+				<img src="/logo-hima.png" alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<div>
 				<h3 class="text-sm font-bold text-white tracking-tight">Admin Pengurus</h3>

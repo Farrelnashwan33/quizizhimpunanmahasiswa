@@ -8,12 +8,12 @@
 	let { data, children } = $props();
 
 	// Check if on quiz screen or special clean screen
-	const isQuizScreen = $derived(page.url.pathname.startsWith('/quiz/'));
-	const isAdminScreen = $derived(page.url.pathname.startsWith('/admin') && page.url.pathname !== '/admin/login');
+	const isQuizScreen = $derived(page.url.pathname === '/quiz' || page.url.pathname.startsWith('/quiz'));
+	const isAdminScreen = $derived(page.url.pathname.startsWith('/admin'));
 </script>
 
 <div class="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-	{#if !isQuizScreen}
+	{#if !isQuizScreen && !isAdminScreen}
 		<Navbar user={data.user} profile={data.profile} />
 	{/if}
 

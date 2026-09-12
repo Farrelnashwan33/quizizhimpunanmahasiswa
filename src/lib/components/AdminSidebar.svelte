@@ -44,7 +44,7 @@
 				<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
 			<div>
-				<h3 class="text-sm font-bold text-white tracking-tight">Admin Pengurus</h3>
+				<h3 class="text-sm font-bold text-white tracking-tight">Admin Penilaian Kaderisasi 1</h3>
 				<p class="text-[11px] text-emerald-400 font-medium">HIMA FST UT Bandung</p>
 			</div>
 		</div>

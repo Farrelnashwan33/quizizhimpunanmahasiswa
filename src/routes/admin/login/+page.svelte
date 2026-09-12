@@ -22,12 +22,12 @@
 			<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white p-2 border border-slate-700 shadow-xl mb-4 overflow-hidden">
 				<img src={logoHima} alt="Logo HIMA FST UT" class="w-full h-full object-contain" />
 			</div>
-			<Badge variant="emerald" size="md" class="mb-3">Portal Khusus Pengurus</Badge>
+			<Badge variant="emerald" size="md" class="mb-3">Portal Penilaian</Badge>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-				Admin Pengurus HIMA
+				Admin Penilaian Kaderisasi 1
 			</h1>
 			<p class="text-sm text-slate-400 mt-2">
-				Fakultas Sains dan Teknologi Universitas Terbuka Bandung
+				HIMA Fakultas Sains dan Teknologi Universitas Terbuka Bandung
 			</p>
 		</div>
 

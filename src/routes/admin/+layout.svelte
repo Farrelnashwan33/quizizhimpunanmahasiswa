@@ -92,7 +92,7 @@
 				>
 					<Menu class="w-5 h-5" />
 				</button>
-				<span class="font-bold text-sm text-white">Panel Admin HIMA</span>
+				<span class="font-bold text-sm text-white">Admin Penilaian Kaderisasi 1</span>
 			</div>
 			<div class="flex items-center gap-2">
 				<button

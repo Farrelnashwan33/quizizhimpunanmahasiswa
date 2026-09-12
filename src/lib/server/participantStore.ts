@@ -3,12 +3,12 @@ export interface ParticipantAttempt {
 	quizId: string;
 	studentId: string;
 	status: 'completed' | 'in_progress' | 'timed_out';
-	score: number;
+	score: number | null;
 	correctCount: number;
 	wrongCount: number;
 	totalQuestions: number;
 	startedAt: Date;
-	submittedAt: Date;
+	submittedAt: Date | null;
 	student: {
 		id: string;
 		fullName: string;

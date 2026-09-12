@@ -1,41 +1,123 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { OFFICIAL_30_QUESTIONS } from '$lib/data/questions';
 import { prisma } from '$lib/server/prisma';
+import { OFFICIAL_30_QUESTIONS } from '$lib/data/questions';
+import { recordAttempt } from '$lib/server/participantStore';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
-		const { studentName, nim, programStudi, whatsapp, answers } = body;
+		const { attemptId: providedAttemptId, studentName, nim, programStudi, whatsapp, answers } = body;
 
-		if (!studentName || !nim) {
+		if (!studentName?.trim() || !nim?.trim()) {
 			return json(
 				{ success: false, error: 'Nama Lengkap dan NIM wajib diisi.' },
 				{ status: 400 }
 			);
 		}
 
-		// 1. Get questions (from database if available, or fallback to OFFICIAL_30_QUESTIONS)
-		let questionsList: any[] = OFFICIAL_30_QUESTIONS;
-		try {
-			const quiz = await prisma.quiz.findFirst({ where: { isActive: true } });
-			const dbQuestions = await prisma.question.findMany({
-				where: quiz ? { quizId: quiz.id } : {},
-				orderBy: { questionNumber: 'asc' }
-			});
-			if (dbQuestions && dbQuestions.length > 0) {
-				questionsList = dbQuestions;
+		const cleanName = studentName.trim();
+		const cleanNim = nim.trim();
+		const cleanProdi = programStudi?.trim() || 'Sains dan Teknologi';
+		const cleanWa = whatsapp?.trim() || null;
+		const studentEmail = `${cleanNim}@student.ut.ac.id`;
+
+		// 1. Find or create Student Profile in database
+		let profile = await prisma.profile.findFirst({
+			where: {
+				OR: [{ nim: cleanNim }, { email: studentEmail }]
 			}
-		} catch (dbErr) {
-			// use fallback
+		});
+
+		if (profile) {
+			profile = await prisma.profile.update({
+				where: { id: profile.id },
+				data: {
+					fullName: cleanName,
+					programStudi: cleanProdi,
+					whatsapp: cleanWa,
+					nim: cleanNim,
+					email: studentEmail
+				}
+			});
+		} else {
+			profile = await prisma.profile.create({
+				data: {
+					fullName: cleanName,
+					nim: cleanNim,
+					email: studentEmail,
+					programStudi: cleanProdi,
+					whatsapp: cleanWa,
+					role: 'mahasiswa'
+				}
+			});
 		}
 
-		const totalQuestions = questionsList.length;
-		let correctCount = 0;
+		// 2. Find active Quiz
+		let quiz = await prisma.quiz.findFirst({
+			where: { isActive: true },
+			include: {
+				questions: {
+					orderBy: { questionNumber: 'asc' }
+				}
+			}
+		});
 
-		const answersBreakdown = questionsList.map((q) => {
-			const studentAns = answers?.[q.id] || answers?.[q.questionNumber] || null;
-			const isCorrect = studentAns === q.correctAnswer;
+		if (!quiz) {
+			quiz = await prisma.quiz.findFirst({
+				include: {
+					questions: {
+						orderBy: { questionNumber: 'asc' }
+					}
+				}
+			});
+		}
+
+		const questionsList = (quiz?.questions && quiz.questions.length > 0)
+			? quiz.questions
+			: OFFICIAL_30_QUESTIONS;
+
+		const totalQuestions = questionsList.length;
+
+		// 3. Find or Create Attempt
+		let targetAttempt: any = null;
+		if (providedAttemptId) {
+			targetAttempt = await prisma.quizAttempt.findUnique({
+				where: { id: providedAttemptId }
+			});
+		}
+
+		if (!targetAttempt) {
+			// Find most recent in_progress attempt
+			targetAttempt = await prisma.quizAttempt.findFirst({
+				where: {
+					studentId: profile.id,
+					status: 'in_progress'
+				},
+				orderBy: { startedAt: 'desc' }
+			});
+		}
+
+		if (!targetAttempt && quiz) {
+			targetAttempt = await prisma.quizAttempt.create({
+				data: {
+					quizId: quiz.id,
+					studentId: profile.id,
+					status: 'in_progress',
+					startedAt: new Date(),
+					totalQuestions
+				}
+			});
+		}
+
+		const attemptId = targetAttempt?.id || providedAttemptId;
+		const now = new Date();
+
+		// 4. Calculate score and build answers breakdown securely
+		let correctCount = 0;
+		const answersBreakdown = questionsList.map((q: any) => {
+			const studentAns = (answers?.[q.id] || answers?.[q.questionNumber] || null)?.toUpperCase() || null;
+			const isCorrect = studentAns !== null && studentAns === q.correctAnswer.toUpperCase();
 			if (isCorrect) {
 				correctCount++;
 			}
@@ -58,96 +140,105 @@ export const POST: RequestHandler = async ({ request }) => {
 		const wrongCount = totalQuestions - correctCount;
 		const rawScore = (correctCount / totalQuestions) * 100;
 		const score = Math.round(rawScore * 100) / 100;
-		const attemptId = 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
-		const now = new Date();
-		const newAttemptRecord = {
+
+		// 5. Save all Answer records and update QuizAttempt in PostgreSQL Transaction
+		if (attemptId && quiz) {
+			try {
+				await prisma.$transaction(async (tx) => {
+					// Upsert each answer
+					for (const item of answersBreakdown) {
+						// Only if question exists as a valid UUID in DB Question table
+						const qInDb = quiz?.questions?.find((dq) => dq.id === item.questionId || dq.questionNumber === item.questionNumber);
+						const actualQId = qInDb?.id || item.questionId;
+
+						if (actualQId && actualQId.includes('-')) {
+							await tx.answer.upsert({
+								where: {
+									attemptId_questionId: {
+										attemptId,
+										questionId: actualQId
+									}
+								},
+								update: {
+									selectedAnswer: item.studentAnswer,
+									isCorrect: item.isCorrect,
+									answeredAt: now
+								},
+								create: {
+									attemptId,
+									questionId: actualQId,
+									selectedAnswer: item.studentAnswer,
+									isCorrect: item.isCorrect,
+									answeredAt: now
+								}
+							});
+						}
+					}
+
+					// Update attempt status to completed
+					await tx.quizAttempt.update({
+						where: { id: attemptId },
+						data: {
+							status: 'completed',
+							submittedAt: now,
+							score,
+							correctCount,
+							wrongCount,
+							totalQuestions
+						}
+					});
+				});
+			} catch (txErr) {
+				console.error('Database transaction error on submit:', txErr);
+			}
+		}
+
+		// 6. Record to in-memory store as live cache mirror
+		const attemptRecord = {
 			id: attemptId,
-			quizId: '11111111-1111-1111-1111-111111111111',
-			studentId: 'std-' + nim,
+			quizId: quiz?.id || '11111111-1111-1111-1111-111111111111',
+			studentId: profile.id,
 			status: 'completed' as const,
 			score,
 			correctCount,
 			wrongCount,
 			totalQuestions,
-			startedAt: now,
+			startedAt: targetAttempt?.startedAt || now,
 			submittedAt: now,
 			student: {
-				id: 'std-' + nim,
-				fullName: studentName,
-				nim,
-				email: `${nim}@student.ut.ac.id`,
-				programStudi: programStudi || 'Sains dan Teknologi',
-				whatsapp: whatsapp || null,
+				id: profile.id,
+				fullName: profile.fullName,
+				nim: profile.nim,
+				email: profile.email,
+				programStudi: profile.programStudi,
+				whatsapp: profile.whatsapp,
 				role: 'mahasiswa' as const,
-				createdAt: now
+				createdAt: profile.createdAt
 			},
 			quiz: {
-				id: '11111111-1111-1111-1111-111111111111',
-				title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
+				id: quiz?.id || '11111111-1111-1111-1111-111111111111',
+				title: quiz?.title || 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
 			},
 			answers: answersBreakdown
 		};
 
-		// 1. Record to in-memory store for instant admin visibility
-		import('$lib/server/participantStore').then(({ recordAttempt }) => {
-			recordAttempt(newAttemptRecord);
-		}).catch(() => {});
-
-		// 2. Attempt to save to Prisma database if connected
-		try {
-			const quiz = await prisma.quiz.findFirst();
-			if (quiz) {
-				let profile = await prisma.profile.findFirst({
-					where: { nim }
-				});
-
-				if (!profile) {
-					const pseudoId = '00000000-0000-4000-8000-' + Math.random().toString(16).substring(2, 14).padEnd(12, '0');
-					profile = await prisma.profile.create({
-						data: {
-							id: pseudoId,
-							fullName: studentName,
-							nim,
-							email: `${nim}@student.ut.ac.id`,
-							programStudi: programStudi || 'Sains dan Teknologi',
-							whatsapp: whatsapp || null,
-							role: 'mahasiswa'
-						}
-					});
-				}
-
-				await prisma.quizAttempt.create({
-					data: {
-						quizId: quiz.id,
-						studentId: profile.id,
-						status: 'completed',
-						score,
-						correctCount,
-						wrongCount,
-						totalQuestions,
-						submittedAt: now
-					}
-				});
-			}
-		} catch (dbErr) {
-			console.warn('Database save notice (working in standalone direct mode):', dbErr);
-		}
+		recordAttempt(attemptRecord);
 
 		return json({
 			success: true,
 			attemptId,
-			studentName,
-			nim,
-			programStudi: programStudi || 'Sains dan Teknologi',
+			studentName: profile.fullName,
+			nim: profile.nim,
+			programStudi: profile.programStudi,
 			score,
 			correctCount,
 			wrongCount,
 			totalQuestions,
-			submittedAt: new Date().toISOString(),
+			submittedAt: now.toISOString(),
 			answersBreakdown
 		});
 	} catch (err: any) {
-		console.error('Error submitting direct quiz:', err);
+		console.error('Error submitting quiz:', err);
 		return json(
 			{ success: false, error: err?.message || 'Gagal memproses pengiriman kuis.' },
 			{ status: 500 }

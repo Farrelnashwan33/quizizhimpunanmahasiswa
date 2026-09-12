@@ -43,7 +43,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 			'Jawaban Salah',
 			'Total Soal',
 			'Status Pengerjaan',
-			'Pelanggaran Buka Tab',
 			'Waktu Mulai',
 			'Waktu Selesai'
 		];
@@ -52,7 +51,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 			const score = att.score ?? 0;
 			const isPassed = score >= 65;
 			const student = att.student || {};
-			const tabViolations = att.tabSwitchCount ?? 0;
 
 			return [
 				index + 1,
@@ -67,7 +65,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 				att.wrongCount ?? 0,
 				att.totalQuestions ?? 30,
 				att.status === 'completed' ? 'Selesai' : 'Sedang Berjalan',
-				tabViolations > 0 ? `${tabViolations}x Buka Tab` : 'Tertib (0x)',
 				att.startedAt ? `"${new Date(att.startedAt).toLocaleString('id-ID')}"` : '""',
 				att.submittedAt ? `"${new Date(att.submittedAt).toLocaleString('id-ID')}"` : '""'
 			].join(',');

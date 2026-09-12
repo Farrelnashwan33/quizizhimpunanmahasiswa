@@ -3,7 +3,7 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { Users, Search, Phone, Mail, Hash, Calendar, CheckCircle2, Clock } from 'lucide-svelte';
+	import { Users, Search, Phone, Mail, Hash, Calendar, CheckCircle2, Clock, Eye, Download } from 'lucide-svelte';
 
 	let { data } = $props();
 	const students = $derived(data.students || []);
@@ -30,6 +30,7 @@
 </svelte:head>
 
 <div class="space-y-6">
+	<!-- Header -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
 		<div>
 			<div class="flex items-center gap-2 mb-1">
@@ -42,6 +43,18 @@
 			<p class="text-xs sm:text-sm text-slate-400 mt-1">
 				Daftar seluruh akun mahasiswa yang telah terdaftar dalam sistem kuis kaderisasi.
 			</p>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<a
+				href="/admin/peserta/export"
+				data-sveltekit-reload
+				download="Rekap_Mahasiswa_Quiz_Kaderisasi_HIMA_FST.csv"
+				class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+			>
+				<Download class="w-4 h-4 mr-2" />
+				<span>Export Data (CSV)</span>
+			</a>
 		</div>
 	</div>
 
@@ -82,9 +95,11 @@
 						<th class="py-3.5 px-4">Nama Lengkap</th>
 						<th class="py-3.5 px-4">NIM</th>
 						<th class="py-3.5 px-4">Program Studi</th>
-						<th class="py-3.5 px-4">Kontak (Email / WA)</th>
-						<th class="py-3.5 px-4">Status Quiz</th>
-						<th class="py-3.5 px-4">Terdaftar Pada</th>
+						<th class="py-3.5 px-4">Nomor WhatsApp</th>
+						<th class="py-3.5 px-4">Waktu Daftar</th>
+						<th class="py-3.5 px-4">Status Pengerjaan</th>
+						<th class="py-3.5 px-4 text-center">Nilai Akhir</th>
+						<th class="py-3.5 px-4 text-right">Aksi Detail</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-800/80">
@@ -93,32 +108,51 @@
 							{@const lastAttempt = s.attempts?.[0]}
 							<tr class="hover:bg-slate-800/50 transition-colors">
 								<td class="py-3.5 px-4 font-mono text-slate-500">{idx + 1}</td>
-								<td class="py-3.5 px-4 font-bold text-white text-sm">{s.fullName}</td>
+								<td class="py-3.5 px-4 font-bold text-white text-sm">
+									<div>{s.fullName}</div>
+									<div class="text-[11px] text-slate-400 font-mono font-normal">{s.email}</div>
+								</td>
 								<td class="py-3.5 px-4 font-mono font-bold text-emerald-400">{s.nim}</td>
 								<td class="py-3.5 px-4">{s.programStudi}</td>
-								<td class="py-3.5 px-4 text-slate-400">
-									<div>{s.email}</div>
-									{#if s.whatsapp}
-										<div class="text-[11px] text-emerald-400 mt-0.5">WA: {s.whatsapp}</div>
-									{/if}
+								<td class="py-3.5 px-4 font-mono text-slate-300">
+									{s.whatsapp || '-'}
+								</td>
+								<td class="py-3.5 px-4 text-slate-400 text-[11px]">
+									{new Date(s.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
 								</td>
 								<td class="py-3.5 px-4">
 									{#if lastAttempt?.status === 'completed'}
-										<Badge variant="emerald" size="sm">Nilai: {lastAttempt.score}</Badge>
+										<Badge variant="emerald" size="sm">Selesai</Badge>
 									{:else if lastAttempt?.status === 'in_progress'}
 										<Badge variant="amber" size="sm">Sedang Mengerjakan</Badge>
 									{:else}
 										<Badge variant="slate" size="sm">Belum Memulai</Badge>
 									{/if}
 								</td>
-								<td class="py-3.5 px-4 text-slate-400 text-[11px]">
-									{new Date(s.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+								<td class="py-3.5 px-4 text-center">
+									{#if lastAttempt?.status === 'completed' && lastAttempt?.score !== null}
+										<span class="text-sm font-black font-mono {(lastAttempt.score ?? 0) >= 65 ? 'text-emerald-400' : 'text-rose-400'}">
+											{lastAttempt.score}
+										</span>
+									{:else}
+										<span class="text-slate-500">-</span>
+									{/if}
+								</td>
+								<td class="py-3.5 px-4 text-right">
+									{#if lastAttempt}
+										<Button href="/admin/peserta/{lastAttempt.id}" variant="outline" size="sm" class="bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700">
+											<Eye class="w-3.5 h-3.5 mr-1" />
+											Detail
+										</Button>
+									{:else}
+										<span class="text-slate-500 text-[11px] italic">Belum Mengerjakan</span>
+									{/if}
 								</td>
 							</tr>
 						{/each}
 					{:else}
 						<tr>
-							<td colspan="7" class="py-12 text-center text-slate-500">
+							<td colspan="9" class="py-12 text-center text-slate-500">
 								Tidak ada data mahasiswa yang ditemukan.
 							</td>
 						</tr>

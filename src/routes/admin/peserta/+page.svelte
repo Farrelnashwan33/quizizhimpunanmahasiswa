@@ -212,18 +212,11 @@
 									{/if}
 								</td>
 								<td class="py-3.5 px-4">
-									<div class="space-y-1">
-										{#if att.status === 'completed'}
-											<Badge variant="emerald" size="sm">Selesai</Badge>
-										{:else}
-											<Badge variant="amber" size="sm">Berjalan</Badge>
-										{/if}
-										{#if ((att as any).tabSwitchCount ?? 0) > 0}
-											<div class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-300 bg-rose-950/80 border border-rose-800 px-1.5 py-0.5 rounded">
-												⚠️ {(att as any).tabSwitchCount}x Buka Tab
-											</div>
-										{/if}
-									</div>
+									{#if att.status === 'completed'}
+										<Badge variant="emerald" size="sm">Selesai</Badge>
+									{:else}
+										<Badge variant="amber" size="sm">Berjalan</Badge>
+									{/if}
 								</td>
 								<td class="py-3.5 px-4 font-medium">
 									<span class="text-emerald-400 font-bold">{att.correctCount}</span> / <span class="text-rose-400 font-bold">{att.wrongCount}</span>

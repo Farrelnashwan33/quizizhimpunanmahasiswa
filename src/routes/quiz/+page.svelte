@@ -45,6 +45,8 @@
 	let programStudi = $state('');
 	let whatsapp = $state('');
 	let isIdentitySubmitted = $state(false);
+	let isStarting = $state(false);
+	let attemptId = $state('');
 
 	// Quiz Working State
 	let currentIndex = $state(0);
@@ -67,6 +69,10 @@
 	onMount(() => {
 		try {
 			const savedId = localStorage.getItem('quiz_fst_student');
+			const savedAttemptId = localStorage.getItem('quiz_fst_attempt_id');
+			if (savedAttemptId) {
+				attemptId = savedAttemptId;
+			}
 			if (savedId) {
 				const parsed = JSON.parse(savedId);
 				studentName = parsed.studentName || '';
@@ -133,28 +139,52 @@
 		};
 	});
 
-	function startQuiz() {
+	async function startQuiz() {
 		if (!studentName.trim() || !nim.trim() || !programStudi.trim()) {
 			toasts.error('Nama Lengkap, NIM, dan Program Studi wajib diisi.');
 			return;
 		}
 
-		try {
-			localStorage.setItem(
-				'quiz_fst_student',
-				JSON.stringify({ studentName, nim, programStudi, whatsapp })
-			);
-		} catch (e) {}
+		isStarting = true;
 
-		// Attempt Fullscreen for Exam Integrity
 		try {
-			if (document.documentElement.requestFullscreen) {
-				document.documentElement.requestFullscreen().catch(() => {});
+			// Register participant and start attempt in PostgreSQL Database
+			const res = await fetch('/api/quiz/start', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					studentName: studentName.trim(),
+					nim: nim.trim(),
+					programStudi: programStudi.trim(),
+					whatsapp: whatsapp.trim()
+				})
+			});
+
+			const data = await res.json();
+
+			if (data.success) {
+				attemptId = data.attemptId;
+				try {
+					localStorage.setItem(
+						'quiz_fst_student',
+						JSON.stringify({ studentName, nim, programStudi, whatsapp })
+					);
+					localStorage.setItem('quiz_fst_attempt_id', data.attemptId);
+				} catch (e) {}
+
+				isIdentitySubmitted = true;
+				window.scrollTo({ top: 0, behavior: 'smooth' });
+			} else {
+				toasts.error(data.error || 'Gagal memulai kuis di sistem database.');
 			}
-		} catch (e) {}
-
-		isIdentitySubmitted = true;
-		window.scrollTo({ top: 0, behavior: 'smooth' });
+		} catch (err) {
+			console.error('Error starting quiz:', err);
+			// Fallback local start
+			isIdentitySubmitted = true;
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		} finally {
+			isStarting = false;
+		}
 	}
 
 	function selectOption(optionKey: string) {
@@ -164,6 +194,19 @@
 		try {
 			localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
 		} catch (e) {}
+
+		// Auto-save answer to database in background
+		if (attemptId && currentQuestion.id) {
+			fetch('/api/quiz/save-answer', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					attemptId,
+					questionId: currentQuestion.id,
+					selectedAnswer: optionKey
+				})
+			}).catch(() => {});
+		}
 	}
 
 	function goToQuestion(idx: number) {
@@ -197,6 +240,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					attemptId,
 					studentName,
 					nim,
 					programStudi,
@@ -211,6 +255,7 @@
 				quizResult = data;
 				try {
 					localStorage.removeItem('quiz_fst_answers');
+					localStorage.removeItem('quiz_fst_attempt_id');
 				} catch (e) {}
 
 				if (data.score >= 65) {
@@ -240,9 +285,11 @@
 		answers = {};
 		quizResult = null;
 		currentIndex = 0;
+		attemptId = '';
 		showDetailedReview = false;
 		try {
 			localStorage.removeItem('quiz_fst_answers');
+			localStorage.removeItem('quiz_fst_attempt_id');
 		} catch (e) {}
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
@@ -329,7 +376,7 @@
 						</Input>
 
 						<div class="pt-4">
-							<Button type="submit" variant="primary" size="lg" fullWidth class="shadow-lg shadow-emerald-600/30 font-bold">
+							<Button type="submit" variant="primary" size="lg" fullWidth loading={isStarting} class="shadow-lg shadow-emerald-600/30 font-bold">
 								<span>Mulai Mengerjakan (30 Soal)</span>
 								<ArrowRight class="w-5 h-5 ml-2" />
 							</Button>

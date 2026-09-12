@@ -50,7 +50,7 @@
 						</a>
 					</li>
 					<li>
-						<a href="/admin/login" class="text-slate-600 hover:text-emerald-600 flex items-center gap-1 transition-colors">
+						<a href="https://hima-fst.vercel.app/login" class="text-slate-600 hover:text-emerald-600 flex items-center gap-1 transition-colors">
 							<Shield class="w-3.5 h-3.5 text-slate-400" />
 							Admin Pengurus
 						</a>

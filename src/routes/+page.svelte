@@ -118,7 +118,7 @@
 					Langsung Kerjakan (Tanpa Perlu Login)
 				</a>
 				<span class="text-slate-300">•</span>
-				<a href="/admin/login" class="inline-flex items-center gap-1 text-slate-500 hover:text-emerald-700 transition-colors">
+				<a href="https://hima-fst.vercel.app/login" class="inline-flex items-center gap-1 text-slate-500 hover:text-emerald-700 transition-colors">
 					<ShieldCheck class="w-3.5 h-3.5" />
 					Portal Admin Pengurus
 				</a>

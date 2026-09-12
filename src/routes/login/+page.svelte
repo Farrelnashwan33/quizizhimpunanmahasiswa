@@ -109,9 +109,9 @@
 				</p>
 
 				<div class="pt-2">
-					<a href="/admin/login" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
-						<ShieldCheck class="w-3.5 h-3.5" />
-						Login sebagai Admin Pengurus HIMA
+					<a href="https://hima-fst.vercel.app/login" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+						<ShieldCheck class="w-3.5 h-3.5 text-emerald-600" />
+						Portal Khusus Admin Pengurus
 					</a>
 				</div>
 			</div>

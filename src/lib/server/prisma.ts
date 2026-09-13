@@ -8,7 +8,7 @@ export function getDatabaseUrl(): string {
 		process.env.DATABASE_URL ||
 		process.env.POSTGRES_PRISMA_URL ||
 		process.env.POSTGRES_URL ||
-		'';
+		'postgresql://farrelnashwan@localhost:5432/quiz_fst?schema=public';
 	url = url.trim();
 
 	if (url) {
@@ -22,9 +22,12 @@ export function getDatabaseUrl(): string {
 	return url;
 }
 
-export const isDatabaseConfigured = Boolean(
-	getDatabaseUrl() !== '' && !getDatabaseUrl().includes('placeholder')
-);
+export function isDatabaseConnected(): boolean {
+	const url = getDatabaseUrl();
+	return Boolean(url && !url.includes('placeholder'));
+}
+
+export const isDatabaseConfigured = true;
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -35,18 +38,14 @@ export function getPrismaClient(): PrismaClient {
 		return globalForPrisma.prisma;
 	}
 
-	const client = url
-		? new PrismaClient({
-				datasources: {
-					db: {
-						url
-					}
-				},
-				log: dev ? ['error', 'warn'] : ['error']
-			})
-		: new PrismaClient({
-				log: ['error']
-			});
+	const client = new PrismaClient({
+		datasources: {
+			db: {
+				url: url || 'postgresql://farrelnashwan@localhost:5432/quiz_fst?schema=public'
+			}
+		},
+		log: dev ? ['error', 'warn'] : ['error']
+	});
 
 	if (process.env.NODE_ENV !== 'production') {
 		globalForPrisma.prisma = client;
@@ -61,4 +60,5 @@ export const prisma = new Proxy({} as PrismaClient, {
 		return (client as any)[prop];
 	}
 });
+
 

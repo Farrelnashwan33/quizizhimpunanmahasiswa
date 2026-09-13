@@ -77,6 +77,12 @@
 
 	onMount(() => {
 		try {
+			const savedResult = localStorage.getItem('quiz_fst_result');
+			if (savedResult) {
+				quizResult = JSON.parse(savedResult);
+				isIdentitySubmitted = true;
+			}
+
 			const savedId = localStorage.getItem('quiz_fst_student');
 			const savedAttemptId = localStorage.getItem('quiz_fst_attempt_id');
 			if (savedAttemptId) {
@@ -338,6 +344,7 @@
 			if (data.success) {
 				quizResult = data;
 				try {
+					localStorage.setItem('quiz_fst_result', JSON.stringify(data));
 					localStorage.removeItem('quiz_fst_answers');
 					localStorage.removeItem('quiz_fst_attempt_id');
 				} catch (e) {}

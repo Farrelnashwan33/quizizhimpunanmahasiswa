@@ -4,10 +4,19 @@ import { env as publicEnv } from '$env/dynamic/public';
 import { prisma } from '$lib/server/prisma';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const supabaseUrl = publicEnv.PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-	const supabaseAnonKey = publicEnv.PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+	const supabaseUrl =
+		publicEnv.PUBLIC_SUPABASE_URL ||
+		process.env.PUBLIC_SUPABASE_URL ||
+		process.env.SUPABASE_URL ||
+		'https://lbgmeiezpjjyvctjxqdl.supabase.co';
+	const supabaseAnonKey =
+		publicEnv.PUBLIC_SUPABASE_ANON_KEY ||
+		process.env.PUBLIC_SUPABASE_ANON_KEY ||
+		process.env.SUPABASE_ANON_KEY ||
+		'placeholder-anon-key';
 
 	event.locals.supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+
 		cookies: {
 			getAll: () => event.cookies.getAll(),
 			setAll: (cookiesToSet) => {

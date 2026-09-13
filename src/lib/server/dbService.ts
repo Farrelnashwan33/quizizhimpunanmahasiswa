@@ -946,13 +946,18 @@ const ESSAY_KEYWORDS: Record<number, string[]> = {
 };
 
 export function evaluateEssayItem(questionNumber: number, studentText: string | null): { isCorrect: boolean; points: number } {
-	if (!studentText || typeof studentText !== 'string' || studentText.trim().length < 4) {
+	if (!studentText || typeof studentText !== 'string') {
 		return { isCorrect: false, points: 0 };
 	}
 
-	const normalized = studentText.toLowerCase().trim();
+	const trimmed = studentText.trim();
+	if (trimmed.length < 5) {
+		return { isCorrect: false, points: 0 };
+	}
+
+	const normalized = trimmed.toLowerCase();
 	const keywords = ESSAY_KEYWORDS[questionNumber] || [];
-	const weight = 100 / 30; // ~3.333
+	const weight = 100 / 30; // 3.333 poin per butir
 
 	let matchCount = 0;
 	for (const kw of keywords) {
@@ -961,14 +966,18 @@ export function evaluateEssayItem(questionNumber: number, studentText: string | 
 		}
 	}
 
-	if (matchCount >= 1 || normalized.length >= 20) {
-		const points = matchCount >= 2 ? weight : weight * 0.9;
-		return { isCorrect: true, points: Math.min(weight, points) };
-	} else if (normalized.length >= 8) {
-		return { isCorrect: true, points: weight * 0.7 };
+	// 1. Jawaban Sesuai Penuh (Memuat 2+ kata kunci materi penting & panjang memadai)
+	if (matchCount >= 2 && normalized.length >= 20) {
+		return { isCorrect: true, points: weight };
 	}
 
-	return { isCorrect: false, points: weight * 0.35 };
+	// 2. Jawaban Sebagian Sesuai (Memuat minimal 1 kata kunci penting)
+	if (matchCount >= 1 && normalized.length >= 10) {
+		return { isCorrect: true, points: Math.round(weight * 0.6 * 100) / 100 };
+	}
+
+	// 3. Jawaban Tidak Memuat Konsep Materi / Asal-asalan (0 Poin)
+	return { isCorrect: false, points: 0 };
 }
 
 /**

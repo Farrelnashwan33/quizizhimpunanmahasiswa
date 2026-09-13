@@ -848,6 +848,11 @@ export async function startQuizAttempt(data: {
 	};
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(val: any): boolean {
+	return typeof val === 'string' && UUID_REGEX.test(val);
+}
+
 /**
  * 7. SAVE ANSWER
  */
@@ -859,24 +864,43 @@ export async function saveAnswer(data: {
 	const { attemptId, questionId, selectedAnswer } = data;
 	const now = new Date();
 
-	if (isDatabaseConfigured && attemptId.includes('-') && questionId.includes('-')) {
+	let resolvedQuestionId: string | null = isUuid(questionId) ? questionId : null;
+
+	if (!resolvedQuestionId && isDatabaseConfigured) {
+		const numMatch = questionId.match(/\d+/);
+		const num = numMatch ? parseInt(numMatch[0], 10) : null;
+		if (num !== null) {
+			try {
+				const q = await prisma.question.findFirst({
+					where: { questionNumber: num }
+				});
+				if (q && isUuid(q.id)) {
+					resolvedQuestionId = q.id;
+				}
+			} catch (e) {}
+		}
+	}
+
+	if (isDatabaseConfigured && isUuid(attemptId) && resolvedQuestionId && isUuid(resolvedQuestionId)) {
 		try {
 			await prisma.answer.upsert({
 				where: {
-					attemptId_questionId: { attemptId, questionId }
+					attemptId_questionId: { attemptId, questionId: resolvedQuestionId }
 				},
 				update: { selectedAnswer, answeredAt: now },
-				create: { attemptId, questionId, selectedAnswer, answeredAt: now }
+				create: { attemptId, questionId: resolvedQuestionId, selectedAnswer, answeredAt: now }
 			});
-		} catch (err) {}
+		} catch (err) {
+			console.warn('saveAnswer prisma notice:', err);
+		}
 	}
 
-	if (isSupabaseConfigured && attemptId.includes('-') && questionId.includes('-')) {
+	if (isSupabaseConfigured && isUuid(attemptId) && resolvedQuestionId && isUuid(resolvedQuestionId)) {
 		try {
 			await supabaseAdmin.from('answers').upsert(
 				{
 					attempt_id: attemptId,
-					question_id: questionId,
+					question_id: resolvedQuestionId,
 					selected_answer: selectedAnswer,
 					answered_at: now.toISOString()
 				},
@@ -1060,25 +1084,39 @@ export async function submitQuizAttempt(data: {
 				attemptId = targetAttempt.id;
 				quizId = targetAttempt.quizId;
 
+				// Fetch database questions to resolve real Question UUIDs
+				const qMap = new Map<number, string>();
+				try {
+					const dbQuestions = await prisma.question.findMany({
+						where: { quizId }
+					});
+					for (const dbq of dbQuestions) {
+						qMap.set(dbq.questionNumber, dbq.id);
+					}
+				} catch (e) {}
+
 				for (const item of answersBreakdown) {
-					if (item.questionId && item.questionId.includes('-')) {
+					const realQId = isUuid(item.questionId) ? item.questionId : qMap.get(item.questionNumber);
+					if (realQId && isUuid(realQId) && isUuid(attemptId)) {
 						try {
 							await prisma.answer.upsert({
 								where: {
-									attemptId_questionId: { attemptId, questionId: item.questionId }
+									attemptId_questionId: { attemptId, questionId: realQId }
 								},
 								update: {
-									selectedAnswer: item.studentAnswer,
+									selectedAnswer: item.studentAnswer || '',
 									answeredAt: now
 								},
 								create: {
 									attemptId,
-									questionId: item.questionId,
-									selectedAnswer: item.studentAnswer,
+									questionId: realQId,
+									selectedAnswer: item.studentAnswer || '',
 									answeredAt: now
 								}
 							});
-						} catch (ansErr) {}
+						} catch (ansErr) {
+							console.warn('submitQuizAttempt answer upsert notice:', ansErr);
+						}
 					}
 				}
 

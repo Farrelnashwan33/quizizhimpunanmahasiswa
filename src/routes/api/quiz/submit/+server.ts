@@ -42,17 +42,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			orderBy: { questionNumber: 'asc' }
 		});
 
+		// Build map of identifier (q.id, 'q-01', '1', etc.) to db Question UUID
+		const qMap = new Map<string, string>();
+		for (const q of dbQuestions) {
+			qMap.set(q.id, q.id);
+			qMap.set(String(q.questionNumber), q.id);
+			qMap.set(`q-${String(q.questionNumber).padStart(2, '0')}`, q.id);
+			qMap.set(`num_${q.questionNumber}`, q.id);
+		}
+
 		// 3. Execute database transaction for automatic essay scoring
 		const result = await prisma.$transaction(async (tx) => {
 			// Save any final in-flight answers if provided
 			if (finalAnswers && typeof finalAnswers === 'object') {
-				for (const [questionId, selectedAnswer] of Object.entries(finalAnswers)) {
-					if (selectedAnswer && typeof selectedAnswer === 'string' && selectedAnswer.trim() !== '') {
+				for (const [key, selectedAnswer] of Object.entries(finalAnswers)) {
+					const realQuestionId = qMap.get(key) || (key.includes('-') && key.length === 36 ? key : null);
+					if (realQuestionId && selectedAnswer && typeof selectedAnswer === 'string' && selectedAnswer.trim() !== '') {
 						await tx.answer.upsert({
 							where: {
 								attemptId_questionId: {
 									attemptId,
-									questionId
+									questionId: realQuestionId
 								}
 							},
 							update: {
@@ -61,7 +71,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							},
 							create: {
 								attemptId,
-								questionId,
+								questionId: realQuestionId,
 								selectedAnswer: selectedAnswer.trim(),
 								answeredAt: new Date()
 							}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -19,6 +20,7 @@
 		Check,
 		HelpCircle,
 		ShieldCheck,
+		ShieldAlert,
 		PenLine,
 		Save
 	} from 'lucide-svelte';
@@ -27,6 +29,11 @@
 	const quiz = $derived(data.quiz);
 	const attempt = $derived(data.attempt);
 	const questions = $derived(data.questions);
+
+	// Anti-Cheat & Tab Integrity State
+	const MAX_TAB_VIOLATIONS = 3;
+	let tabViolationsCount = $state(0);
+	let showTabWarningModal = $state(false);
 
 	// State
 	let currentIndex = $state(0);
@@ -37,6 +44,97 @@
 	let isSubmitting = $state(false);
 
 	let saveTimeout: any = null;
+
+	onMount(() => {
+		try {
+			const savedViolations = localStorage.getItem('quiz_fst_tab_violations_' + attempt.id);
+			if (savedViolations) {
+				tabViolationsCount = parseInt(savedViolations, 10) || 0;
+			}
+		} catch (e) {}
+
+		// Anti-Cheat & Integrity Handlers
+		let lastViolationTime = 0;
+		const recordTabViolation = () => {
+			if (isSubmitting) return;
+			const now = Date.now();
+			if (now - lastViolationTime < 1500) return;
+			lastViolationTime = now;
+
+			tabViolationsCount += 1;
+			showTabWarningModal = true;
+
+			try {
+				localStorage.setItem('quiz_fst_tab_violations_' + attempt.id, String(tabViolationsCount));
+			} catch (e) {}
+
+			if (tabViolationsCount >= MAX_TAB_VIOLATIONS) {
+				toasts.error('Batas toleransi perpindahan tab habis! Kuis otomatis dikirimkan.');
+				setTimeout(() => {
+					showTabWarningModal = false;
+					handleFinalSubmit();
+				}, 1500);
+			} else {
+				toasts.error(`Peringatan: Terdeteksi meninggalkan tab kuis! (${tabViolationsCount}/${MAX_TAB_VIOLATIONS})`);
+			}
+		};
+
+		const handleVisibilityChange = () => {
+			if (document.hidden) recordTabViolation();
+		};
+
+		const handleWindowBlur = () => {
+			recordTabViolation();
+		};
+
+		const handleCopy = (e: ClipboardEvent) => {
+			e.preventDefault();
+			toasts.warning('Penyalinan soal dinonaktifkan demi integritas ujian.');
+		};
+
+		const handlePaste = (e: ClipboardEvent) => {
+			e.preventDefault();
+			toasts.warning('Fitur tempel (paste) dinonaktifkan demi integritas ujian.');
+		};
+
+		const handleContextMenu = (e: MouseEvent) => {
+			e.preventDefault();
+			toasts.warning('Klik kanan dinonaktifkan selama kuis berlangsung.');
+		};
+
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && ['u', 'p', 'c', 'v'].includes(e.key.toLowerCase())) {
+				e.preventDefault();
+				toasts.warning('Pintasan keyboard dinonaktifkan.');
+			}
+			if (e.key === 'F12') {
+				e.preventDefault();
+			}
+		};
+
+		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+			e.preventDefault();
+			e.returnValue = '';
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		window.addEventListener('blur', handleWindowBlur);
+		document.addEventListener('copy', handleCopy);
+		document.addEventListener('paste', handlePaste);
+		document.addEventListener('contextmenu', handleContextMenu);
+		document.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('beforeunload', handleBeforeUnload);
+
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			window.removeEventListener('blur', handleWindowBlur);
+			document.removeEventListener('copy', handleCopy);
+			document.removeEventListener('paste', handlePaste);
+			document.removeEventListener('contextmenu', handleContextMenu);
+			document.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('beforeunload', handleBeforeUnload);
+		};
+	});
 
 	$effect(() => {
 		if (data.savedAnswers) {
@@ -180,8 +278,14 @@
 				</div>
 			</div>
 
-			<!-- Autosave Status & Action Buttons -->
+			<!-- Autosave Status, Anti-Cheat & Action Buttons -->
 			<div class="flex items-center gap-2 sm:gap-3">
+				<!-- Anti-Cheat Status Badge -->
+				<div class="hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border font-medium {tabViolationsCount > 0 ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+					<ShieldAlert class="w-3.5 h-3.5 {tabViolationsCount > 0 ? 'text-rose-600' : 'text-emerald-600'}" />
+					<span>{tabViolationsCount > 0 ? `Peringatan Tab: ${tabViolationsCount}/${MAX_TAB_VIOLATIONS}` : 'Anti-Buka Tab Aktif'}</span>
+				</div>
+
 				<!-- Saving status badge -->
 				<div class="hidden md:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg {savingStatus === 'saved' ? 'text-emerald-700 bg-emerald-50' : savingStatus === 'saving' ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'}">
 					{#if savingStatus === 'saved'}
@@ -440,3 +544,68 @@
 	loading={isSubmitting}
 	onconfirm={handleFinalSubmit}
 />
+
+<!-- Anti-Tab Switch Warning Modal -->
+<Modal bind:open={showTabWarningModal} title="Peringatan Integritas Ujian" maxWidth="md">
+	<div class="space-y-4 text-center py-2">
+		<div class="w-14 h-14 rounded-2xl {tabViolationsCount >= MAX_TAB_VIOLATIONS ? 'bg-rose-100 text-rose-600 animate-bounce' : 'bg-amber-100 text-amber-600'} flex items-center justify-center mx-auto shadow-sm">
+			<ShieldAlert class="w-8 h-8" />
+		</div>
+
+		<div>
+			<h3 class="text-base font-extrabold text-slate-900">
+				{tabViolationsCount >= MAX_TAB_VIOLATIONS ? 'Batas Pelanggaran Terlampaui!' : 'Terdeteksi Meninggalkan Halaman Kuis!'}
+			</h3>
+			<p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+				{#if tabViolationsCount >= MAX_TAB_VIOLATIONS}
+					Anda telah meninggalkan halaman kuis sebanyak <strong>{tabViolationsCount} kali</strong> (mencapai batas maksimal). Sistem sedang <strong>mengirimkan jawaban Anda secara otomatis</strong> ke panitia.
+				{:else}
+					Anda terdeteksi berpindah tab, meminimalkan browser, atau membuka aplikasi lain. Demi menjaga kejujuran dan integritas ujian, seluruh aktivitas perpindahan tab direkam oleh sistem.
+				{/if}
+			</p>
+		</div>
+
+		<!-- Violation Counter Card -->
+		<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+			<div class="flex items-center justify-between font-bold mb-2">
+				<span class="text-slate-700">Status Pelanggaran Tab:</span>
+				<span class="{tabViolationsCount >= 2 ? 'text-rose-600 font-extrabold' : 'text-amber-600'}">
+					{tabViolationsCount} dari {MAX_TAB_VIOLATIONS} Toleransi
+				</span>
+			</div>
+			<div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+				<div
+					class="h-full transition-all duration-300 {tabViolationsCount >= MAX_TAB_VIOLATIONS ? 'bg-rose-600' : tabViolationsCount === 2 ? 'bg-amber-500' : 'bg-emerald-500'}"
+					style="width: {Math.min(100, (tabViolationsCount / MAX_TAB_VIOLATIONS) * 100)}%"
+				></div>
+			</div>
+			<p class="text-[11px] text-slate-500 mt-2 text-left">
+				⚠️ <em>Kuis akan otomatis dikirim paksa jika Anda berganti tab {MAX_TAB_VIOLATIONS} kali.</em>
+			</p>
+		</div>
+	</div>
+
+	{#snippet footer()}
+		{#if tabViolationsCount < MAX_TAB_VIOLATIONS}
+			<Button
+				variant="primary"
+				fullWidth
+				onclick={() => showTabWarningModal = false}
+			>
+				Saya Mengerti & Kembali Mengerjakan
+			</Button>
+		{:else}
+			<Button
+				variant="danger"
+				fullWidth
+				loading={isSubmitting}
+				onclick={() => {
+					showTabWarningModal = false;
+					handleFinalSubmit();
+				}}
+			>
+				Kirim Sekarang
+			</Button>
+		{/if}
+	{/snippet}
+</Modal>

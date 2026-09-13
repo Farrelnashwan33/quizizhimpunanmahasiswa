@@ -890,36 +890,36 @@ export async function saveAnswer(data: {
 }
 
 const ESSAY_KEYWORDS: Record<number, string[]> = {
-	1: ['harmonis', 'hubungan', 'menghormati', 'keteraturan', 'antarwarga', 'tertib', 'etika', 'anggota'],
-	2: ['mendengarkan', 'menyimak', 'selesai', 'santun', 'tanggapan', 'respons', 'bicara'],
-	3: ['tepat waktu', 'disiplin', 'tenggat', 'deadline', 'tuntas', 'tanggung jawab'],
-	4: ['integritas', 'keselarasan', 'kejujuran', 'perkataan', 'perbuatan', 'konsistensi', 'jujur'],
-	5: ['amanah', 'tanggung jawab', 'pertanggungjawaban', 'transparan', 'jujur', 'tuntas', 'laporan'],
-	6: ['kolektif', 'kolegial', 'musyawarah', 'kebersamaan', 'mufakat', 'bersama'],
-	7: ['responsif', 'tanggap', 'cepat', 'merespons', 'koordinasi', 'kepekaan', 'komunikasi'],
-	8: ['inisiatif', 'proaktif', 'tanpa menunggu', 'tanpa diperintah', 'bermanfaat', 'positif'],
-	9: ['kritis', 'fakta', 'objektif', 'analisis', 'kebenaran', 'ilmiah', 'berani'],
-	10: ['kesadaran', 'intelektual', 'ilmu', 'peduli', 'bangsa', 'rakyat', 'masyarakat'],
-	11: ['kebenaran', 'keadilan', 'sosial', 'moralitas', 'kejujuran', 'masyarakat'],
-	12: ['pendidikan', 'pengajaran', 'penelitian', 'pengembangan', 'pengabdian', 'masyarakat', 'tridharma'],
-	13: ['belajar', 'tekun', 'ilmu', 'berbagi', 'pengetahuan', 'wawasan'],
-	14: ['penelitian', 'pengembangan', 'solusi', 'masalah', 'riset', 'ilmiah', 'masyarakat'],
-	15: ['seimbang', 'melengkapi', 'utuh', 'terintegrasi', 'sarjana', 'kompetensi', 'karakter'],
-	16: ['iron stock', 'pemimpin', 'masa depan', 'penerus', 'kader', 'generasi'],
-	17: ['guardian of value', 'penjaga', 'nilai', 'moral', 'moralitas', 'kebenaran', 'etika', 'luhur'],
-	18: ['social control', 'kontrol sosial', 'pengawas', 'mengawasi', 'kebijakan', 'keadilan'],
-	19: ['agent of change', 'agen perubahan', 'inovasi', 'gagasan', 'perubahan', 'transformasi'],
-	20: ['wadah', 'potensi', 'kepemimpinan', 'leadership', 'kerja sama', 'teamwork', 'belajar', 'organisasi'],
-	21: ['giliran', 'santun', 'etika', 'forum', 'mendengarkan', 'argumen', 'rasional'],
-	22: ['komunikasi', 'proaktif', 'deadline', 'koordinasi', 'solusi', 'kendala', 'waktu'],
-	23: ['mengingatkan', 'jujur', 'memperbaiki', 'revisi', 'laporan', 'konstruktif'],
-	24: ['musyawarah', 'mufakat', 'diskusi', 'dialog', 'bersama', 'terbuka', 'kepentingan'],
-	25: ['inisiatif', 'membantu', 'mendampingi', 'peduli', 'solidaritas', 'kader'],
-	26: ['data', 'fakta', 'kajian', 'santun', 'solusi', 'dialog', 'kritik'],
-	27: ['penelitian', 'pengabdian', 'masyarakat', 'terpadu', 'solusi', 'ilmiah'],
-	28: ['musyawarah', 'mufakat', 'menerima', 'menghormati', 'kolektif', 'komitmen'],
-	29: ['pembelajaran', 'tanggung jawab', 'sertifikat', 'kontribusi', 'proses', 'belajar'],
-	30: ['kontribusi', 'etika', 'tanggung jawab', 'kerja sama', 'hima fst', 'kemajuan', 'nyata']
+	1: ['harmonis', 'harmoni', 'hubungan', 'menghormati', 'menghargai', 'keteraturan', 'antarwarga', 'tertib', 'ketertiban', 'etika', 'anggota', 'kondusif', 'rukun', 'konflik', 'pedoman', 'moral', 'iklim', 'nyaman', 'damai', 'kerja sama', 'tujuan bersama'],
+	2: ['mendengarkan', 'menyimak', 'selesai', 'utuh', 'santun', 'sopan', 'tanggapan', 'respons', 'merespons', 'bicara', 'pembicaraan', 'tidak memotong', 'memotong', 'menghargai', 'rasional', 'objektif', 'giliran', 'active listening', 'perhatian'],
+	3: ['tepat waktu', 'disiplin', 'kedisiplinan', 'tenggat', 'deadline', 'batas waktu', 'tuntas', 'tanggung jawab', 'hadir', 'kehadiran', 'aturan', 'mematuhi', 'komitmen', 'konsisten', 'kesepakatan'],
+	4: ['integritas', 'keselarasan', 'selaras', 'kejujuran', 'jujur', 'perkataan', 'perbuatan', 'ucapan', 'tindakan', 'konsistensi', 'konsisten', 'amanah', 'dipercaya', 'moral', 'prinsip', 'kebenaran'],
+	5: ['amanah', 'tanggung jawab', 'bertanggung jawab', 'pertanggungjawaban', 'transparan', 'keterbukaan', 'jujur', 'kejujuran', 'tuntas', 'laporan', 'lpj', 'konsekuensi', 'akuntabel', 'menyelesaikan tugas'],
+	6: ['kolektif', 'kolegial', 'musyawarah', 'mufakat', 'kebersamaan', 'bersama', 'kepentingan bersama', 'kesetaraan', 'gotong royong', 'organisasi', 'tim', 'solid', 'tidak egois', 'konsensus'],
+	7: ['responsif', 'tanggap', 'cepat', 'merespons', 'respons', 'koordinasi', 'kepekaan', 'komunikasi', 'proaktif', 'sigap', 'peduli', 'alur', 'konfirmasi', 'informasi'],
+	8: ['inisiatif', 'proaktif', 'tanpa menunggu', 'tanpa diperintah', 'bermanfaat', 'positif', 'kesadaran', 'mandiri', 'peka', 'bergerak', 'sukarela', 'tindakan nyata', 'peduli'],
+	9: ['kritis', 'fakta', 'objektif', 'analisis', 'menganalisis', 'kebenaran', 'ilmiah', 'data', 'rasional', 'solusi', 'konstruktif', 'berani', 'telaah', 'logika', 'solutif'],
+	10: ['kesadaran', 'intelektual', 'ilmu', 'ilmu pengetahuan', 'peduli', 'kepedulian', 'bangsa', 'rakyat', 'masyarakat', 'nurani', 'keadilan', 'sosial', 'nasib', 'masa depan'],
+	11: ['kebenaran', 'keadilan', 'sosial', 'moralitas', 'kejujuran', 'masyarakat', 'rakyat', 'idealisme', 'independen', 'independensi', 'kemanusiaan', 'aspirasi', 'nilai luhur'],
+	12: ['pendidikan', 'pengajaran', 'penelitian', 'pengembangan', 'pengabdian', 'masyarakat', 'tridharma', '3 pilar', 'tiga pilar', 'riset', 'pkm'],
+	13: ['belajar', 'tekun', 'ilmu', 'pengetahuan', 'wawasan', 'berbagi', 'berdiskusi', 'mentoring', 'akademik', 'mengajar', 'tutor', 'kapasitas', 'literasi'],
+	14: ['penelitian', 'pengembangan', 'solusi', 'masalah', 'riset', 'ilmiah', 'masyarakat', 'pengabdian', 'terapan', 'inovatif', 'pemecahan masalah', 'lingkungan'],
+	15: ['seimbang', 'keseimbangan', 'melengkapi', 'utuh', 'terintegrasi', 'sarjana', 'kompetensi', 'karakter', 'holistik', 'sinergi', 'menyeluruh', 'teori dan praktik', 'akademis'],
+	16: ['iron stock', 'pemimpin', 'masa depan', 'penerus', 'generasi', 'kader', 'estafet', 'calon pemimpin', 'regenerasi', 'aset', 'pelanjut'],
+	17: ['guardian of value', 'penjaga nilai', 'penjaga', 'nilai', 'moral', 'moralitas', 'kebenaran', 'etika', 'luhur', 'norma', 'kesusilaan', 'teladan', 'benteng moral'],
+	18: ['social control', 'kontrol sosial', 'pengawas', 'mengawasi', 'kebijakan', 'keadilan', 'aturan', 'kampus', 'pemerintah', 'masyarakat', 'koreksi', 'advokasi'],
+	19: ['agent of change', 'agen perubahan', 'inovasi', 'inovatif', 'gagasan', 'ide', 'perubahan', 'transformasi', 'penggerak', 'kemajuan', 'pembaruan', 'solusi'],
+	20: ['wadah', 'potensi', 'minat', 'bakat', 'kepemimpinan', 'leadership', 'kerja sama', 'teamwork', 'belajar', 'pembelajaran', 'organisasi', 'soft skill', 'relasi', 'kontribusi'],
+	21: ['giliran', 'antre', 'santun', 'sopan', 'etika', 'forum', 'sidang', 'mendengarkan', 'menyimak', 'argumen', 'argumentasi', 'rasional', 'tidak memotong', 'menghargai', 'objektif'],
+	22: ['komunikasi', 'mengabari', 'menginfokan', 'proaktif', 'deadline', 'tenggat', 'batas waktu', 'koordinasi', 'solusi', 'kendala', 'masalah', 'jujur', 'bantuan', 'ketua'],
+	23: ['mengingatkan', 'menegur', 'pribadi', 'jujur', 'memperbaiki', 'koreksi', 'revisi', 'laporan', 'lpj', 'konstruktif', 'membantu', 'transparan', 'akuntabel'],
+	24: ['musyawarah', 'mufakat', 'diskusi', 'dialog', 'bersama', 'terbuka', 'kekeluargaan', 'kepentingan bersama', 'ego', 'tidak egois', 'kolektif kolegial', 'titik temu'],
+	25: ['inisiatif', 'sukarela', 'membantu', 'mendampingi', 'mengarahkan', 'peduli', 'empati', 'solidaritas', 'kader baru', 'anggota baru', 'merangkul', 'alur kerja'],
+	26: ['data', 'fakta', 'bukti', 'valid', 'kajian', 'telaah', 'ilmiah', 'santun', 'etika', 'solusi', 'dialog', 'aspirasi', 'kritik', 'konstruktif', 'objektif', 'rekomendasi'],
+	27: ['penelitian', 'riset', 'pengembangan', 'pengabdian', 'masyarakat', 'pkm', 'terpadu', 'keterpaduan', 'integrasi', 'solusi', 'ilmiah', 'terapan', 'tridharma'],
+	28: ['musyawarah', 'mufakat', 'menerima', 'menghormati', 'kolektif', 'kolegial', 'komitmen', 'bersama', 'legawa', 'sportif', 'kedewasaan', 'etika forum', 'loyalitas'],
+	29: ['pembelajaran', 'proses', 'belajar', 'tanggung jawab', 'sertifikat', 'bukan sekadar sertifikat', 'bukan cuma sertifikat', 'kontribusi', 'dedikasi', 'kerja sama', 'pengembangan diri'],
+	30: ['kontribusi', 'aktif', 'minat', 'keahlian', 'etika', 'moral', 'integritas', 'tanggung jawab', 'amanah', 'kerja sama', 'kolaborasi', 'hima fst', 'hima', 'ut bandung', 'kemajuan', 'manfaat']
 };
 
 export function evaluateEssayItem(questionNumber: number, studentText: string | null): { isCorrect: boolean; points: number } {
@@ -928,32 +928,51 @@ export function evaluateEssayItem(questionNumber: number, studentText: string | 
 	}
 
 	const trimmed = studentText.trim();
-	if (trimmed.length < 5) {
+	if (trimmed.length < 3) {
 		return { isCorrect: false, points: 0 };
 	}
 
 	const normalized = trimmed.toLowerCase();
 	const keywords = ESSAY_KEYWORDS[questionNumber] || [];
-	const weight = 100 / 30; // 3.333 poin per butir
+	const weight = 100 / 30; // ~3.333 poin per butir
 
-	let matchCount = 0;
+	// Hitung kecocokan kata kunci unik
+	let matchedKeywords: string[] = [];
 	for (const kw of keywords) {
 		if (normalized.includes(kw.toLowerCase())) {
-			matchCount++;
+			matchedKeywords.push(kw);
 		}
 	}
 
-	// 1. Jawaban Sesuai Penuh (Memuat 2+ kata kunci materi penting & panjang memadai)
-	if (matchCount >= 2 && normalized.length >= 20) {
-		return { isCorrect: true, points: weight };
+	const matchCount = matchedKeywords.length;
+	const charLen = normalized.length;
+
+	// 1. Kategori Sempurna / Mendekati Inti Secara Utuh (100% Poin - 3.33 Poin)
+	// Memuat 2+ kata kunci konsep penting ATAU 1 kata kunci penting dengan penjelasan berbobot (>= 20 karakter)
+	if (matchCount >= 2 || (matchCount >= 1 && charLen >= 20)) {
+		return { isCorrect: true, points: Math.round(weight * 100) / 100 };
 	}
 
-	// 2. Jawaban Sebagian Sesuai (Memuat minimal 1 kata kunci penting)
-	if (matchCount >= 1 && normalized.length >= 10) {
-		return { isCorrect: true, points: Math.round(weight * 0.6 * 100) / 100 };
+	// 2. Kategori Mendekati Inti / Baik Sekali (85% Poin - ~2.83 Poin)
+	// Memuat 1 kata kunci esensial dengan penjelasan ringkas (>= 8 karakter)
+	if (matchCount >= 1 && charLen >= 8) {
+		return { isCorrect: true, points: Math.round(weight * 0.85 * 100) / 100 };
 	}
 
-	// 3. Jawaban Tidak Memuat Konsep Materi / Asal-asalan (0 Poin)
+	// 3. Kategori Cukup Mendekati (70% Poin - ~2.33 Poin)
+	// Menyebutkan kata kunci dasar
+	if (matchCount >= 1) {
+		return { isCorrect: true, points: Math.round(weight * 0.70 * 100) / 100 };
+	}
+
+	// 4. Kategori Relevan / Parsial Terkait Organisasi/Kaderisasi (40% Poin - ~1.33 Poin)
+	const generalContextWords = ['mahasiswa', 'organisasi', 'hima', 'tugas', 'tujuan', 'baik', 'kegiatan', 'anggota', 'pengurus', 'masyarakat', 'kampus'];
+	const hasGeneralContext = generalContextWords.some((w) => normalized.includes(w));
+	if (hasGeneralContext && charLen >= 15) {
+		return { isCorrect: true, points: Math.round(weight * 0.40 * 100) / 100 };
+	}
+
+	// 5. Tidak Relevan / Asal-asalan (0 Poin)
 	return { isCorrect: false, points: 0 };
 }
 

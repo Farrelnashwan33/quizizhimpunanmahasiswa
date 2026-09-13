@@ -44,7 +44,6 @@ export interface DetailedAnswerItem {
 	answeredAt?: Date | string | null;
 }
 
-
 export interface FormattedAttempt {
 	id: string;
 	quizId: string;
@@ -62,73 +61,19 @@ export interface FormattedAttempt {
 	tabSwitchCount?: number;
 }
 
-// Normalizer helper: Converts snake_case from Supabase REST API to standard camelCase
-function normalizeSupabaseAttempt(raw: any): FormattedAttempt {
-	const studentRaw = raw.student || raw.profiles || {};
-	const quizRaw = raw.quiz || raw.quizzes || {};
-
-	const student: StudentProfile = {
-		id: studentRaw.id || raw.student_id || 'std-' + (studentRaw.nim || 'unknown'),
-		fullName: studentRaw.full_name || studentRaw.fullName || raw.student_name || 'Mahasiswa',
-		nim: studentRaw.nim || raw.nim || '-',
-		email: studentRaw.email || (studentRaw.nim ? `${studentRaw.nim}@student.ut.ac.id` : '-'),
-		programStudi: studentRaw.program_studi || studentRaw.programStudi || 'Sains dan Teknologi',
-		whatsapp: studentRaw.whatsapp || null,
-		role: studentRaw.role || 'mahasiswa',
-		createdAt: studentRaw.created_at || raw.started_at || new Date()
-	};
-
-	const quiz: QuizInfo = {
-		id: quizRaw.id || raw.quiz_id || '11111111-1111-1111-1111-111111111111',
-		title: quizRaw.title || 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung',
-		description: quizRaw.description || null,
-		durationMinutes: quizRaw.duration_minutes || 60,
-		isActive: quizRaw.is_active ?? true
-	};
-
-	return {
-		id: raw.id,
-		quizId: quiz.id,
-		studentId: student.id,
-		status: raw.status || 'completed',
-		score: raw.score !== null && raw.score !== undefined ? Number(raw.score) : null,
-		correctCount: raw.correct_count ?? raw.correctCount ?? 0,
-		wrongCount: raw.wrong_count ?? raw.wrongCount ?? 0,
-		totalQuestions: raw.total_questions ?? raw.totalQuestions ?? 30,
-		startedAt: raw.started_at || raw.startedAt || new Date(),
-		submittedAt: raw.submitted_at || raw.submittedAt || null,
-		student,
-		quiz,
-		answers: raw.answers || []
-	};
-}
-
 /**
- * 1. GET ALL QUIZ ATTEMPTS (Daftar Peserta & Nilai Quiz)
- * Resilient dual-source fetching: Prisma -> Supabase REST API -> Memory Store
+ * ULTRA-RESILIENT DATA LOADER:
+ * 1. Queries Prisma (quiz_attempts & profiles)
+ * 2. Queries Supabase REST API across all known tables (quiz_attempts, attempts, profiles, users, answers)
+ * 3. Joins profiles + attempts + answers with multiple key strategies (id, student_id, nim, email)
+ * 4. Merges with in-memory store
  */
-export async function getAllQuizAttempts(params: {
-	search?: string;
-	prodi?: string;
-	status?: string;
-	sort?: string;
-	page?: number;
-	pageSize?: number;
-} = {}) {
-	const {
-		search = '',
-		prodi = '',
-		status = '',
-		sort = 'score_desc',
-		page = 1,
-		pageSize = 15
-	} = params;
+async function fetchAllRawDataFromDatabase(): Promise<FormattedAttempt[]> {
+	const attemptMap = new Map<string, FormattedAttempt>(); // Key: attemptId or student NIM
 
-	let dbAttempts: FormattedAttempt[] = [];
-	let dbProdis: string[] = [];
-	let isDbQueried = false;
-
-	// LAYER 1: Try Prisma Direct PostgreSQL Connection
+	// ==========================================
+	// 1. FETCH VIA PRISMA (POSTGRESQL DIRECT)
+	// ==========================================
 	if (isDatabaseConfigured) {
 		try {
 			const prismaAttempts = await prisma.quizAttempt.findMany({
@@ -142,8 +87,9 @@ export async function getAllQuizAttempts(params: {
 				orderBy: { startedAt: 'desc' }
 			});
 
-			if (prismaAttempts && prismaAttempts.length > 0) {
-				dbAttempts = prismaAttempts.map((att: any) => ({
+			for (const att of prismaAttempts) {
+				const key = att.student?.nim || att.id;
+				attemptMap.set(key, {
 					id: att.id,
 					quizId: att.quizId,
 					studentId: att.studentId,
@@ -165,95 +111,240 @@ export async function getAllQuizAttempts(params: {
 						createdAt: att.student.createdAt
 					},
 					quiz: {
-						id: att.quiz.id,
-						title: att.quiz.title
+						id: att.quiz?.id || '11111111-1111-1111-1111-111111111111',
+						title: att.quiz?.title || 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
 					},
 					answers: att.answers
-				}));
-				isDbQueried = true;
+				});
 			}
 
-			const prodiRows = await prisma.profile.findMany({
-				where: { role: 'mahasiswa' },
-				select: { programStudi: true },
-				distinct: ['programStudi']
+			// Also fetch profiles that might not have an attempt row yet
+			const prismaProfiles = await prisma.profile.findMany({
+				where: { role: 'mahasiswa' }
 			});
-			dbProdis = prodiRows.map((p) => p.programStudi).filter(Boolean);
+
+			for (const prof of prismaProfiles) {
+				if (!attemptMap.has(prof.nim)) {
+					attemptMap.set(prof.nim, {
+						id: 'att-prof-' + prof.id,
+						quizId: '11111111-1111-1111-1111-111111111111',
+						studentId: prof.id,
+						status: 'in_progress',
+						score: null,
+						correctCount: 0,
+						wrongCount: 0,
+						totalQuestions: 30,
+						startedAt: prof.createdAt,
+						submittedAt: null,
+						student: {
+							id: prof.id,
+							fullName: prof.fullName,
+							nim: prof.nim,
+							email: prof.email,
+							programStudi: prof.programStudi,
+							whatsapp: prof.whatsapp,
+							role: prof.role,
+							createdAt: prof.createdAt
+						},
+						quiz: {
+							id: '11111111-1111-1111-1111-111111111111',
+							title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
+						},
+						answers: []
+					});
+				}
+			}
 		} catch (prismaErr) {
-			console.warn('Prisma query in getAllQuizAttempts encountered error, falling back to Supabase REST API:', prismaErr);
+			console.warn('Prisma query warning in fetchAllRawDataFromDatabase:', prismaErr);
 		}
 	}
 
-	// LAYER 2: Try Supabase REST API via supabaseAdmin
-	if (!isDbQueried && isSupabaseConfigured) {
+	// ==========================================
+	// 2. FETCH VIA SUPABASE REST API (SERVICE ROLE / DIRECT REST)
+	// ==========================================
+	if (isSupabaseConfigured) {
 		try {
-			const { data: supaAttempts, error: supaErr } = await supabaseAdmin
-				.from('quiz_attempts')
-				.select(`
-					id,
-					quiz_id,
-					student_id,
-					started_at,
-					submitted_at,
-					status,
-					score,
-					correct_count,
-					wrong_count,
-					total_questions,
-					student:profiles (
-						id,
-						full_name,
-						nim,
-						email,
-						program_studi,
-						whatsapp,
-						role,
-						created_at
-					),
-					quiz:quizzes (
-						id,
-						title
-					),
-					answers (
-						id,
-						attempt_id,
-						question_id,
-						selected_answer,
-						is_correct,
-						answered_at,
-						question:questions (*)
-					)
-				`)
-				.order('started_at', { ascending: false });
-
-			if (!supaErr && supaAttempts && supaAttempts.length > 0) {
-				dbAttempts = supaAttempts.map(normalizeSupabaseAttempt);
-				isDbQueried = true;
+			// A. Fetch all profiles from Supabase
+			let supaProfiles: any[] = [];
+			const { data: pData } = await supabaseAdmin.from('profiles').select('*');
+			if (pData && pData.length > 0) {
+				supaProfiles = pData;
+			} else {
+				// Alternative table name
+				const { data: uData } = await supabaseAdmin.from('users').select('*');
+				if (uData && uData.length > 0) supaProfiles = uData;
 			}
 
-			const { data: supaProdis } = await supabaseAdmin
-				.from('profiles')
-				.select('program_studi')
-				.eq('role', 'mahasiswa');
+			const profileById = new Map<string, any>();
+			const profileByNim = new Map<string, any>();
+			const profileByEmail = new Map<string, any>();
 
-			if (supaProdis) {
-				dbProdis = Array.from(new Set(supaProdis.map((p: any) => p.program_studi))).filter(Boolean);
+			for (const p of supaProfiles) {
+				const nim = p.nim || p.student_nim || p.NIM || '';
+				const id = p.id || p.user_id || '';
+				const email = p.email || '';
+				const normalizedProfile: StudentProfile = {
+					id: id || 'std-' + (nim || Math.random().toString(36).substring(2, 8)),
+					fullName: p.full_name || p.fullName || p.name || p.nama || 'Mahasiswa',
+					nim: nim || '-',
+					email: email || (nim ? `${nim}@student.ut.ac.id` : '-'),
+					programStudi: p.program_studi || p.programStudi || p.prodi || 'Sains dan Teknologi',
+					whatsapp: p.whatsapp || p.no_wa || p.phone || null,
+					role: p.role || 'mahasiswa',
+					createdAt: p.created_at || new Date()
+				};
+
+				if (id) profileById.set(id, normalizedProfile);
+				if (nim && nim !== '-') profileByNim.set(nim, normalizedProfile);
+				if (email && email !== '-') profileByEmail.set(email, normalizedProfile);
+			}
+
+			// B. Fetch all answers from Supabase
+			let supaAnswers: any[] = [];
+			const { data: ansData } = await supabaseAdmin.from('answers').select('*');
+			if (ansData && ansData.length > 0) supaAnswers = ansData;
+
+			const answersByAttemptId = new Map<string, any[]>();
+			for (const a of supaAnswers) {
+				const attId = a.attempt_id || a.attemptId;
+				if (attId) {
+					if (!answersByAttemptId.has(attId)) answersByAttemptId.set(attId, []);
+					answersByAttemptId.get(attId)!.push({
+						id: a.id,
+						attemptId: attId,
+						questionId: a.question_id || a.questionId,
+						selectedAnswer: a.selected_answer || a.selectedAnswer,
+						isCorrect: a.is_correct ?? a.isCorrect,
+						answeredAt: a.answered_at || a.answeredAt
+					});
+				}
+			}
+
+			// C. Fetch all quiz attempts from Supabase
+			let supaAttempts: any[] = [];
+			const { data: attData } = await supabaseAdmin.from('quiz_attempts').select('*');
+			if (attData && attData.length > 0) {
+				supaAttempts = attData;
+			} else {
+				const { data: altAtt } = await supabaseAdmin.from('attempts').select('*');
+				if (altAtt && altAtt.length > 0) supaAttempts = altAtt;
+			}
+
+			for (const att of supaAttempts) {
+				const attId = att.id;
+				const studentId = att.student_id || att.studentId || att.user_id;
+				const matchedProfile: StudentProfile =
+					profileById.get(studentId) ||
+					profileByNim.get(att.nim || '') ||
+					profileByEmail.get(att.email || '') || {
+						id: studentId || 'std-unknown',
+						fullName: att.student_name || att.fullName || 'Mahasiswa',
+						nim: att.nim || '-',
+						email: att.email || '-',
+						programStudi: att.program_studi || att.programStudi || 'Sains dan Teknologi',
+						whatsapp: att.whatsapp || null,
+						role: 'mahasiswa',
+						createdAt: att.started_at || new Date()
+					};
+
+				const answers = answersByAttemptId.get(attId) || [];
+				const key = matchedProfile.nim !== '-' ? matchedProfile.nim : attId;
+
+				attemptMap.set(key, {
+					id: attId,
+					quizId: att.quiz_id || att.quizId || '11111111-1111-1111-1111-111111111111',
+					studentId: matchedProfile.id,
+					status: att.status || 'completed',
+					score: att.score !== null && att.score !== undefined ? Number(att.score) : null,
+					correctCount: att.correct_count ?? att.correctCount ?? 0,
+					wrongCount: att.wrong_count ?? att.wrongCount ?? 0,
+					totalQuestions: att.total_questions ?? att.totalQuestions ?? 30,
+					startedAt: att.started_at || att.startedAt || new Date(),
+					submittedAt: att.submitted_at || att.submittedAt || null,
+					student: matchedProfile,
+					quiz: {
+						id: att.quiz_id || '11111111-1111-1111-1111-111111111111',
+						title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
+					},
+					answers
+				});
+			}
+
+			// If profiles exist without attempts in supaAttempts, include them
+			for (const [nim, prof] of profileByNim.entries()) {
+				if (!attemptMap.has(nim) && prof.role === 'mahasiswa') {
+					attemptMap.set(nim, {
+						id: 'att-prof-' + prof.id,
+						quizId: '11111111-1111-1111-1111-111111111111',
+						studentId: prof.id,
+						status: 'in_progress',
+						score: null,
+						correctCount: 0,
+						wrongCount: 0,
+						totalQuestions: 30,
+						startedAt: prof.createdAt,
+						submittedAt: null,
+						student: prof,
+						quiz: {
+							id: '11111111-1111-1111-1111-111111111111',
+							title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
+						},
+						answers: []
+					});
+				}
 			}
 		} catch (supaErr) {
-			console.warn('Supabase REST query in getAllQuizAttempts encountered error:', supaErr);
+			console.warn('Supabase REST query warning in fetchAllRawDataFromDatabase:', supaErr);
 		}
 	}
 
-	// LAYER 3: Merge with In-Memory Store
+	// ==========================================
+	// 3. MERGE IN-MEMORY STORE & SINKRONISASI
+	// ==========================================
 	const memoryAttempts = getMemoryAttempts();
-	const dbNims = new Set(dbAttempts.map((a) => a.student?.nim));
-	const extraMemory = memoryAttempts.filter((m) => m.student && !dbNims.has(m.student.nim));
-	const allAttempts: FormattedAttempt[] = [...dbAttempts, ...(extraMemory as any)];
+	for (const mem of memoryAttempts) {
+		const key = mem.student?.nim || mem.id;
+		if (!attemptMap.has(key)) {
+			attemptMap.set(key, mem as any);
+		}
+	}
 
-	// Keep memory store synced with persistent records
-	for (const item of dbAttempts) {
+	const allResults = Array.from(attemptMap.values());
+
+	// Mirror all to memory store
+	for (const item of allResults) {
 		recordAttempt(item as any);
 	}
+
+	return allResults;
+}
+
+/**
+ * 1. GET ALL QUIZ ATTEMPTS (Daftar Peserta & Nilai Quiz)
+ */
+export async function getAllQuizAttempts(params: {
+	search?: string;
+	prodi?: string;
+	status?: string;
+	sort?: string;
+	page?: number;
+	pageSize?: number;
+} = {}) {
+	const {
+		search = '',
+		prodi = '',
+		status = '',
+		sort = 'score_desc',
+		page = 1,
+		pageSize = 15
+	} = params;
+
+	const allAttempts = await fetchAllRawDataFromDatabase();
+
+	// Extract unique prodi list
+	const prodiList = Array.from(
+		new Set(allAttempts.map((a) => a.student?.programStudi).filter(Boolean))
+	);
 
 	// Apply Filters
 	let filtered = allAttempts;
@@ -300,19 +391,12 @@ export async function getAllQuizAttempts(params: {
 	const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 	const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-	const allProdiList = Array.from(
-		new Set([
-			...dbProdis,
-			...allAttempts.map((a) => a.student?.programStudi)
-		])
-	).filter(Boolean);
-
 	return {
 		attempts: paginated,
 		totalCount,
 		page,
 		totalPages,
-		prodiList: allProdiList,
+		prodiList,
 		filters: { search, prodi, status, sort }
 	};
 }
@@ -321,136 +405,11 @@ export async function getAllQuizAttempts(params: {
  * 2. GET ATTEMPT BY ID / NIM (Detail Jawaban 30 Soal)
  */
 export async function getQuizAttemptById(idOrNim: string) {
-	let attempt: FormattedAttempt | null = null;
-	let questionsList: any[] = OFFICIAL_30_QUESTIONS;
+	const allAttempts = await fetchAllRawDataFromDatabase();
 
-	// Layer 1: Prisma
-	if (isDatabaseConfigured) {
-		try {
-			const dbAttempt = await prisma.quizAttempt.findFirst({
-				where: {
-					OR: [
-						{ id: idOrNim },
-						{ studentId: idOrNim },
-						{ student: { nim: idOrNim } }
-					]
-				},
-				include: {
-					student: true,
-					quiz: true,
-					answers: {
-						include: { question: true }
-					}
-				}
-			});
-
-			if (dbAttempt) {
-				attempt = {
-					id: dbAttempt.id,
-					quizId: dbAttempt.quizId,
-					studentId: dbAttempt.studentId,
-					status: dbAttempt.status,
-					score: dbAttempt.score !== null ? Number(dbAttempt.score) : null,
-					correctCount: dbAttempt.correctCount,
-					wrongCount: dbAttempt.wrongCount,
-					totalQuestions: dbAttempt.totalQuestions,
-					startedAt: dbAttempt.startedAt,
-					submittedAt: dbAttempt.submittedAt,
-					student: dbAttempt.student as any,
-					quiz: dbAttempt.quiz as any,
-					answers: dbAttempt.answers
-				};
-
-				const dbQuestions = await prisma.question.findMany({
-					where: { quizId: dbAttempt.quizId },
-					orderBy: { questionNumber: 'asc' }
-				});
-				if (dbQuestions && dbQuestions.length > 0) {
-					questionsList = dbQuestions;
-				}
-			}
-		} catch (err) {
-			console.warn('Prisma error in getQuizAttemptById, trying Supabase REST API:', err);
-		}
-	}
-
-	// Layer 2: Supabase REST
-	if (!attempt && isSupabaseConfigured) {
-		try {
-			// Query attempt directly or join profiles
-			const { data: supaAttempt } = await supabaseAdmin
-				.from('quiz_attempts')
-				.select(`
-					*,
-					student:profiles (*),
-					quiz:quizzes (*),
-					answers (*, question:questions (*))
-				`)
-				.or(`id.eq.${idOrNim},student_id.eq.${idOrNim}`)
-				.maybeSingle();
-
-			if (supaAttempt) {
-				attempt = normalizeSupabaseAttempt(supaAttempt);
-			} else {
-				// Try lookup by student nim
-				const { data: prof } = await supabaseAdmin
-					.from('profiles')
-					.select('id')
-					.eq('nim', idOrNim)
-					.maybeSingle();
-
-				if (prof) {
-					const { data: supaAtt2 } = await supabaseAdmin
-						.from('quiz_attempts')
-						.select(`
-							*,
-							student:profiles (*),
-							quiz:quizzes (*),
-							answers (*, question:questions (*))
-						`)
-						.eq('student_id', prof.id)
-						.order('started_at', { ascending: false })
-						.limit(1)
-						.maybeSingle();
-
-					if (supaAtt2) {
-						attempt = normalizeSupabaseAttempt(supaAtt2);
-					}
-				}
-			}
-
-			const { data: supaQuestions } = await supabaseAdmin
-				.from('questions')
-				.select('*')
-				.order('question_number', { ascending: true });
-
-			if (supaQuestions && supaQuestions.length > 0) {
-				questionsList = supaQuestions.map((q: any) => ({
-					id: q.id,
-					questionNumber: q.question_number,
-					section: q.section,
-					questionText: q.question_text,
-					optionA: q.option_a,
-					optionB: q.option_b,
-					optionC: q.option_c,
-					optionD: q.option_d,
-					correctAnswer: q.correct_answer,
-					explanation: q.explanation
-				}));
-			}
-		} catch (err) {
-			console.warn('Supabase REST error in getQuizAttemptById:', err);
-		}
-	}
-
-	// Layer 3: Memory Store Fallback
-	if (!attempt) {
-		const memList = getMemoryAttempts();
-		const mem = memList.find((a) => a.id === idOrNim || a.student.nim === idOrNim || a.studentId === idOrNim);
-		if (mem) {
-			attempt = mem as any;
-		}
-	}
+	const attempt = allAttempts.find(
+		(a) => a.id === idOrNim || a.student?.nim === idOrNim || a.studentId === idOrNim
+	);
 
 	if (!attempt) {
 		return null;
@@ -468,7 +427,7 @@ export async function getQuizAttemptById(idOrNim: string) {
 	}
 
 	// Build detailed 30 questions breakdown
-	const detailedQuestions: DetailedAnswerItem[] = questionsList.map((q) => {
+	const detailedQuestions: DetailedAnswerItem[] = OFFICIAL_30_QUESTIONS.map((q) => {
 		const ans = answerMap.get(q.id) || answerMap.get(`num_${q.questionNumber}`);
 		const studentChoice = (ans?.selectedAnswer || ans?.selected_answer || ans?.studentAnswer || null)?.toUpperCase() || null;
 		const isCorrect = studentChoice !== null && studentChoice === q.correctAnswer?.toUpperCase();
@@ -494,7 +453,6 @@ export async function getQuizAttemptById(idOrNim: string) {
 		};
 	});
 
-
 	return {
 		attempt,
 		student: attempt.student,
@@ -507,13 +465,12 @@ export async function getQuizAttemptById(idOrNim: string) {
  * 3. GET DASHBOARD STATISTICS
  */
 export async function getDashboardStatistics() {
-	const allRes = await getAllQuizAttempts({ pageSize: 10000 });
-	const attempts = allRes.attempts;
+	const allAttempts = await fetchAllRawDataFromDatabase();
 
-	const completedAttempts = attempts.filter((a) => a.status === 'completed' && a.score !== null);
-	const totalParticipants = attempts.length;
+	const completedAttempts = allAttempts.filter((a) => a.status === 'completed' && a.score !== null);
+	const totalParticipants = allAttempts.length;
 	const totalCompleted = completedAttempts.length;
-	const totalInProgress = attempts.filter((a) => a.status === 'in_progress').length;
+	const totalInProgress = allAttempts.filter((a) => a.status === 'in_progress').length;
 
 	let averageScore = 0;
 	let highestScore = 0;
@@ -543,7 +500,7 @@ export async function getDashboardStatistics() {
 		});
 	}
 
-	const uniqueStudents = new Set(attempts.map((a) => a.student.nim)).size;
+	const uniqueStudents = new Set(allAttempts.map((a) => a.student?.nim)).size;
 
 	return {
 		stats: {
@@ -557,16 +514,16 @@ export async function getDashboardStatistics() {
 			totalQuestions: 30
 		},
 		distribution,
-		recentAttempts: attempts.slice(0, 6)
+		recentAttempts: allAttempts.slice(0, 6)
 	};
 }
 
 /**
- * 4. GET HASIL & STATISTIK SECTION ACCURACY
+ * 4. GET HASIL & STATISTIK
  */
 export async function getHasilStatistics() {
-	const allRes = await getAllQuizAttempts({ pageSize: 10000 });
-	const completed = allRes.attempts.filter((a) => a.status === 'completed');
+	const allAttempts = await fetchAllRawDataFromDatabase();
+	const completed = allAttempts.filter((a) => a.status === 'completed');
 
 	const sectionStats: Record<string, { total: number; correct: number }> = {
 		'Nilai dan Karakter Dasar': { total: 0, correct: 0 },
@@ -606,17 +563,15 @@ export async function getHasilStatistics() {
 }
 
 /**
- * 5. GET ALL MAHASISWA (Data Mahasiswa)
+ * 5. GET ALL MAHASISWA
  */
 export async function getAllMahasiswa(params: { search?: string; prodi?: string } = {}) {
 	const { search = '', prodi = '' } = params;
-	const allRes = await getAllQuizAttempts({ pageSize: 10000 });
-	const attempts = allRes.attempts;
+	const allAttempts = await fetchAllRawDataFromDatabase();
 
-	// Group attempts by student NIM
 	const studentMap = new Map<string, any>();
 
-	for (const att of attempts) {
+	for (const att of allAttempts) {
 		const s = att.student;
 		if (!s || !s.nim) continue;
 
@@ -669,7 +624,7 @@ export async function getAllMahasiswa(params: { search?: string; prodi?: string 
 }
 
 /**
- * 6. PERSISTENT QUIZ START
+ * 6. START QUIZ ATTEMPT
  */
 export async function startQuizAttempt(data: {
 	studentName: string;
@@ -688,14 +643,9 @@ export async function startQuizAttempt(data: {
 	let studentId = 'std-' + cleanNim;
 	let quizId = '11111111-1111-1111-1111-111111111111';
 
-	// 1. Prisma Engine Write
 	if (isDatabaseConfigured) {
 		try {
-			// Find or create quiz
-			let quiz = await prisma.quiz.findFirst({ where: { isActive: true } });
-			if (!quiz) {
-				quiz = await prisma.quiz.findFirst();
-			}
+			let quiz = await prisma.quiz.findFirst();
 			if (!quiz) {
 				quiz = await prisma.quiz.create({
 					data: {
@@ -708,7 +658,6 @@ export async function startQuizAttempt(data: {
 			}
 			quizId = quiz.id;
 
-			// Find or create profile
 			let profile = await prisma.profile.findFirst({
 				where: { OR: [{ nim: cleanNim }, { email: studentEmail }] }
 			});
@@ -716,11 +665,7 @@ export async function startQuizAttempt(data: {
 			if (profile) {
 				profile = await prisma.profile.update({
 					where: { id: profile.id },
-					data: {
-						fullName: cleanName,
-						programStudi: cleanProdi,
-						whatsapp: cleanWa
-					}
+					data: { fullName: cleanName, programStudi: cleanProdi, whatsapp: cleanWa }
 				});
 			} else {
 				profile = await prisma.profile.create({
@@ -749,14 +694,12 @@ export async function startQuizAttempt(data: {
 
 			attemptId = attempt.id;
 		} catch (prismaErr) {
-			console.warn('Prisma start notice, trying Supabase REST API fallback:', prismaErr);
+			console.warn('Prisma start notice:', prismaErr);
 		}
 	}
 
-	// 2. Supabase REST Engine Write
 	if (isSupabaseConfigured) {
 		try {
-			// Upsert profile in Supabase
 			const { data: supaProf } = await supabaseAdmin
 				.from('profiles')
 				.upsert(
@@ -773,11 +716,8 @@ export async function startQuizAttempt(data: {
 				.select('id')
 				.maybeSingle();
 
-			if (supaProf) {
-				studentId = supaProf.id;
-			}
+			if (supaProf) studentId = supaProf.id;
 
-			// Create attempt
 			const { data: supaAtt } = await supabaseAdmin
 				.from('quiz_attempts')
 				.insert({
@@ -791,15 +731,12 @@ export async function startQuizAttempt(data: {
 				.select('id')
 				.maybeSingle();
 
-			if (supaAtt) {
-				attemptId = supaAtt.id;
-			}
+			if (supaAtt) attemptId = supaAtt.id;
 		} catch (supaErr) {
 			console.warn('Supabase REST start notice:', supaErr);
 		}
 	}
 
-	// 3. Mirror to Memory Store
 	const attemptRecord: ParticipantAttempt = {
 		id: attemptId,
 		quizId,
@@ -841,7 +778,7 @@ export async function startQuizAttempt(data: {
 }
 
 /**
- * 7. PERSISTENT SAVE SINGLE ANSWER
+ * 7. SAVE ANSWER
  */
 export async function saveAnswer(data: {
 	attemptId: string;
@@ -857,33 +794,23 @@ export async function saveAnswer(data: {
 				where: {
 					attemptId_questionId: { attemptId, questionId }
 				},
-				update: {
-					selectedAnswer,
-					answeredAt: now
-				},
-				create: {
-					attemptId,
-					questionId,
-					selectedAnswer,
-					answeredAt: now
-				}
+				update: { selectedAnswer, answeredAt: now },
+				create: { attemptId, questionId, selectedAnswer, answeredAt: now }
 			});
 		} catch (err) {}
 	}
 
 	if (isSupabaseConfigured && attemptId.includes('-') && questionId.includes('-')) {
 		try {
-			await supabaseAdmin
-				.from('answers')
-				.upsert(
-					{
-						attempt_id: attemptId,
-						question_id: questionId,
-						selected_answer: selectedAnswer,
-						answered_at: now.toISOString()
-					},
-					{ onConflict: 'attempt_id,question_id' }
-				);
+			await supabaseAdmin.from('answers').upsert(
+				{
+					attempt_id: attemptId,
+					question_id: questionId,
+					selected_answer: selectedAnswer,
+					answered_at: now.toISOString()
+				},
+				{ onConflict: 'attempt_id,question_id' }
+			);
 		} catch (err) {}
 	}
 
@@ -891,7 +818,7 @@ export async function saveAnswer(data: {
 }
 
 /**
- * 8. PERSISTENT SUBMIT QUIZ ATTEMPT (Hitung Nilai & Simpan Permanen)
+ * 8. SUBMIT QUIZ ATTEMPT
  */
 export async function submitQuizAttempt(data: {
 	attemptId?: string;
@@ -908,7 +835,6 @@ export async function submitQuizAttempt(data: {
 	const studentEmail = `${cleanNim}@student.ut.ac.id`;
 	const now = new Date();
 
-	// 1. Calculate Score based on official 30 questions
 	let correctCount = 0;
 	const answersBreakdown = OFFICIAL_30_QUESTIONS.map((q) => {
 		const studentChoice = (data.answers[q.id] || data.answers[q.questionNumber.toString()] || null)?.toUpperCase() || null;
@@ -940,7 +866,6 @@ export async function submitQuizAttempt(data: {
 	let studentId = 'std-' + cleanNim;
 	let quizId = '11111111-1111-1111-1111-111111111111';
 
-	// 2. Persist to Prisma
 	if (isDatabaseConfigured) {
 		try {
 			let profile = await prisma.profile.findFirst({
@@ -996,16 +921,12 @@ export async function submitQuizAttempt(data: {
 				attemptId = targetAttempt.id;
 				quizId = targetAttempt.quizId;
 
-				// Save answers
 				for (const item of answersBreakdown) {
 					if (item.questionId && item.questionId.includes('-')) {
 						try {
 							await prisma.answer.upsert({
 								where: {
-									attemptId_questionId: {
-										attemptId,
-										questionId: item.questionId
-									}
+									attemptId_questionId: { attemptId, questionId: item.questionId }
 								},
 								update: {
 									selectedAnswer: item.studentAnswer,
@@ -1024,7 +945,6 @@ export async function submitQuizAttempt(data: {
 					}
 				}
 
-				// Update attempt status
 				await prisma.quizAttempt.update({
 					where: { id: attemptId },
 					data: {
@@ -1038,11 +958,10 @@ export async function submitQuizAttempt(data: {
 				});
 			}
 		} catch (prismaErr) {
-			console.warn('Prisma error during submit, continuing with Supabase REST API:', prismaErr);
+			console.warn('Prisma error during submit:', prismaErr);
 		}
 	}
 
-	// 3. Persist to Supabase REST
 	if (isSupabaseConfigured) {
 		try {
 			const { data: supaProf } = await supabaseAdmin
@@ -1063,7 +982,6 @@ export async function submitQuizAttempt(data: {
 
 			if (supaProf) studentId = supaProf.id;
 
-			// Upsert attempt in Supabase
 			const { data: supaAtt } = await supabaseAdmin
 				.from('quiz_attempts')
 				.upsert(
@@ -1089,7 +1007,6 @@ export async function submitQuizAttempt(data: {
 		}
 	}
 
-	// 4. Mirror to In-Memory Cache
 	const finalRecord: ParticipantAttempt = {
 		id: attemptId,
 		quizId,

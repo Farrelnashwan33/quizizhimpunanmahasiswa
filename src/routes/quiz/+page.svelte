@@ -32,7 +32,8 @@
 		RotateCcw,
 		ShieldAlert,
 		AlertTriangle,
-		Maximize2
+		PenLine,
+		Save
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -54,6 +55,7 @@
 	let reviewModalOpen = $state(false);
 	let confirmSubmitOpen = $state(false);
 	let isSubmitting = $state(false);
+	let autoSaveStatus = $state<'saved' | 'saving' | 'idle'>('saved');
 
 	// Quiz Result State
 	let quizResult = $state<any>(null);
@@ -61,11 +63,13 @@
 
 	const currentQuestion = $derived(questions[currentIndex]);
 	const answeredCount = $derived(
-		Object.values(answers).filter((a) => a && a.trim() !== '').length
+		Object.values(answers).filter((a) => a && typeof a === 'string' && a.trim().length > 0).length
 	);
 	const isAllAnswered = $derived(answeredCount === totalQuestions);
 
-	// Anti-Cheat Event Handlers & LocalStorage Setup
+	// Debounce timer for saving answers
+	let saveTimeout: any = null;
+
 	onMount(() => {
 		try {
 			const savedId = localStorage.getItem('quiz_fst_student');
@@ -90,7 +94,7 @@
 			}
 		} catch (e) {}
 
-		// 1. Prevent Copy, Cut, Paste & Right Click
+		// Anti-Cheat & Integrity Handlers
 		const handleCopy = (e: ClipboardEvent) => {
 			if (isIdentitySubmitted && !quizResult) {
 				e.preventDefault();
@@ -105,10 +109,9 @@
 			}
 		};
 
-		// 2. Block Shortcuts (Ctrl+C, Ctrl+V, Ctrl+U, F12)
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (isIdentitySubmitted && !quizResult) {
-				if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'u', 'a', 'p'].includes(e.key.toLowerCase())) {
+				if ((e.ctrlKey || e.metaKey) && ['u', 'p'].includes(e.key.toLowerCase())) {
 					e.preventDefault();
 					toasts.warning('Pintasan keyboard dinonaktifkan.');
 				}
@@ -118,7 +121,6 @@
 			}
 		};
 
-		// 3. Warn on Page Reload/Close
 		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 			if (isIdentitySubmitted && !quizResult) {
 				e.preventDefault();
@@ -148,7 +150,6 @@
 		isStarting = true;
 
 		try {
-			// Register participant and start attempt in PostgreSQL Database
 			const res = await fetch('/api/quiz/start', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -179,7 +180,6 @@
 			}
 		} catch (err) {
 			console.error('Error starting quiz:', err);
-			// Fallback local start
 			isIdentitySubmitted = true;
 			window.scrollTo({ top: 0, behavior: 'smooth' });
 		} finally {
@@ -187,30 +187,54 @@
 		}
 	}
 
-	function selectOption(optionKey: string) {
+	function handleAnswerInput(text: string) {
 		if (!currentQuestion || isSubmitting || quizResult) return;
-		answers[currentQuestion.id] = optionKey;
+		answers[currentQuestion.id] = text;
 
 		try {
 			localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
 		} catch (e) {}
 
-		// Auto-save answer to database in background
-		if (attemptId && currentQuestion.id) {
-			fetch('/api/quiz/save-answer', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					attemptId,
-					questionId: currentQuestion.id,
-					selectedAnswer: optionKey
-				})
-			}).catch(() => {});
-		}
+		// Debounce auto-save to database
+		autoSaveStatus = 'saving';
+		if (saveTimeout) clearTimeout(saveTimeout);
+		saveTimeout = setTimeout(async () => {
+			if (attemptId && currentQuestion.id) {
+				try {
+					await fetch('/api/quiz/save-answer', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							attemptId,
+							questionId: currentQuestion.id,
+							selectedAnswer: text
+						})
+					});
+					autoSaveStatus = 'saved';
+				} catch (err) {
+					autoSaveStatus = 'saved';
+				}
+			} else {
+				autoSaveStatus = 'saved';
+			}
+		}, 600);
 	}
 
 	function goToQuestion(idx: number) {
 		if (idx >= 0 && idx < totalQuestions) {
+			// Trigger immediate save of current answer before switching
+			if (currentQuestion && attemptId && answers[currentQuestion.id]) {
+				fetch('/api/quiz/save-answer', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						attemptId,
+						questionId: currentQuestion.id,
+						selectedAnswer: answers[currentQuestion.id]
+					})
+				}).catch(() => {});
+			}
+
 			currentIndex = idx;
 			reviewModalOpen = false;
 			window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -258,17 +282,15 @@
 					localStorage.removeItem('quiz_fst_attempt_id');
 				} catch (e) {}
 
-				if (data.score >= 65) {
-					try {
-						confetti({
-							particleCount: 90,
-							spread: 70,
-							origin: { y: 0.6 }
-						});
-					} catch (e) {}
-				}
+				try {
+					confetti({
+						particleCount: 90,
+						spread: 70,
+						origin: { y: 0.6 }
+					});
+				} catch (e) {}
 
-				toasts.success('Quiz berhasil dikirim dan nilai telah dihitung!');
+				toasts.success('Jawaban quiz essai berhasil dikirim!');
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			} else {
 				toasts.error(data.error || 'Gagal mengirim quiz.');
@@ -296,11 +318,11 @@
 </script>
 
 <svelte:head>
-	<title>Quiz Kaderisasi Tingkat I - HIMA FST UT Bandung</title>
+	<title>Quiz Kaderisasi Tingkat I (Essai) - HIMA FST UT Bandung</title>
 </svelte:head>
 
 <div class="min-h-screen bg-slate-50 flex flex-col">
-	<!-- STATE 1: ISI IDENTITAS MAHASISWA (TANPA LOGIN / REGISTER) -->
+	<!-- STATE 1: ISI IDENTITAS MAHASISWA -->
 	{#if !isIdentitySubmitted && !quizResult}
 		<div class="flex-1 flex items-center justify-center px-4 py-12 bg-linear-to-b from-emerald-50/50 via-slate-50 to-slate-100">
 			<div class="max-w-lg w-full">
@@ -314,7 +336,7 @@
 						Quiz Kaderisasi HIMA FST UT Bandung
 					</h1>
 					<p class="text-xs sm:text-sm text-slate-600 mt-2">
-						Himpunan Mahasiswa Fakultas Sains dan Teknologi Universitas Terbuka
+						Uji Pemahaman, Bangun Karakter, dan Siap Berkontribusi (Sistem Soal Essai)
 					</p>
 				</div>
 
@@ -377,16 +399,16 @@
 
 						<div class="pt-4">
 							<Button type="submit" variant="primary" size="lg" fullWidth loading={isStarting} class="shadow-lg shadow-emerald-600/30 font-bold">
-								<span>Mulai Mengerjakan (30 Soal)</span>
+								<span>Mulai Mengerjakan (30 Soal Essai)</span>
 								<ArrowRight class="w-5 h-5 ml-2" />
 							</Button>
 						</div>
 					</form>
 
 					<div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-						<span>30 Pilihan Ganda</span>
+						<span>30 Soal Essai</span>
 						<span>•</span>
-						<span>Otomatis Dinilai</span>
+						<span>Autosave Aktif</span>
 						<span>•</span>
 						<span>HIMA FST UT Bandung</span>
 					</div>
@@ -394,7 +416,7 @@
 			</div>
 		</div>
 
-	<!-- STATE 2: MENGERJAKAN 30 SOAL QUIZ -->
+	<!-- STATE 2: MENGERJAKAN 30 SOAL ESSAI -->
 	{:else if !quizResult}
 		<!-- Sticky Quiz Header -->
 		<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 shadow-xs">
@@ -421,8 +443,18 @@
 					</div>
 				</div>
 
-				<!-- Actions -->
+				<!-- Autosave & Actions -->
 				<div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+					<div class="hidden sm:flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg font-medium">
+						{#if autoSaveStatus === 'saving'}
+							<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+							<span class="text-amber-700">Menyimpan...</span>
+						{:else}
+							<CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
+							<span>Tersimpan</span>
+						{/if}
+					</div>
+
 					<Button variant="outline" size="sm" class="px-2 sm:px-3 text-xs" onclick={() => reviewModalOpen = true}>
 						<ListCheck class="w-4 h-4 sm:mr-1.5" />
 						<span class="hidden sm:inline">Review ({answeredCount}/{totalQuestions})</span>
@@ -430,7 +462,7 @@
 
 					<Button variant="primary" size="sm" class="px-2.5 sm:px-3.5 text-xs font-bold" onclick={() => confirmSubmitOpen = true} loading={isSubmitting}>
 						<Send class="w-3.5 h-3.5 mr-1" />
-						<span>Selesai</span>
+						<span>Kirim Quiz</span>
 					</Button>
 				</div>
 			</div>
@@ -442,14 +474,14 @@
 		</header>
 
 		<!-- Main Question Workspace -->
-		<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 select-none">
+		<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 			<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
 				<!-- Left/Center: Question Card (3 Cols) -->
 				<div class="lg:col-span-3 space-y-6">
 					{#if currentQuestion}
-						{@const currentAnswer = answers[currentQuestion.id]}
+						{@const currentAnswer = answers[currentQuestion.id] || ''}
 
-						<Card glass padding="lg" class="shadow-md border-slate-200 select-none">
+						<Card glass padding="lg" class="shadow-md border-slate-200">
 							<!-- Header -->
 							<div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
 								<div class="flex items-center gap-2.5">
@@ -460,44 +492,54 @@
 										{currentQuestion.section}
 									</Badge>
 								</div>
-								<span class="text-xs font-semibold text-slate-400">
-									Pilihan Ganda
-								</span>
+								<div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
+									<span>Soal Essai</span>
+								</div>
 							</div>
 
 							<!-- Question Text -->
-							<div class="mb-8">
+							<div class="mb-6">
+								<h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+									Soal {currentQuestion.questionNumber} — {currentQuestion.section}
+								</h2>
 								<p class="text-base sm:text-lg font-semibold text-slate-900 leading-relaxed whitespace-pre-line">
 									{currentQuestion.questionText}
 								</p>
 							</div>
 
-							<!-- Options A, B, C, D -->
-							<div class="space-y-3">
-								{#each [
-									{ key: 'A', text: currentQuestion.optionA },
-									{ key: 'B', text: currentQuestion.optionB },
-									{ key: 'C', text: currentQuestion.optionC },
-									{ key: 'D', text: currentQuestion.optionD }
-								] as opt}
-									{@const isSelected = currentAnswer === opt.key}
-									<button
-										type="button"
-										class="w-full text-left p-4 sm:p-4.5 rounded-2xl border-2 transition-all duration-200 flex items-start gap-3.5 cursor-pointer group {isSelected ? 'bg-emerald-50/80 border-emerald-500 shadow-xs shadow-emerald-500/10' : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/50'}"
-										onclick={() => selectOption(opt.key)}
-									>
-										<div class="w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all {isSelected ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 group-hover:bg-slate-200'}">
-											{#if isSelected}
-												<Check class="w-4 h-4 stroke-[3]" />
-											{:else}
-												{opt.key}
-											{/if}
-										</div>
-										<div class="flex-1 text-sm leading-snug {isSelected ? 'font-semibold text-emerald-950' : 'text-slate-800'}">
-											{opt.text}
-										</div>
-									</button>
-								{/each}
+							<!-- Essay Textarea Input -->
+							<div class="space-y-2">
+								<div class="flex items-center justify-between text-xs">
+									<label for="essay-answer" class="font-bold text-slate-700 flex items-center gap-1.5">
+										<PenLine class="w-3.5 h-3.5 text-emerald-600" />
+										<span>Jawaban Essai Mahasiswa:</span>
+									</label>
+									<span class="text-slate-400 font-mono text-[11px]">
+										{currentAnswer.trim().length} Karakter
+									</span>
+								</div>
+
+								<div class="relative">
+									<textarea
+										id="essay-answer"
+										rows="7"
+										value={currentAnswer}
+										oninput={(e) => handleAnswerInput((e.target as HTMLTextAreaElement).value)}
+										placeholder="Tuliskan jawaban essai Anda secara jelas, terstruktur, dan lengkap di sini..."
+										class="w-full p-4 rounded-2xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none text-slate-800 text-sm leading-relaxed transition-all placeholder:text-slate-400 bg-white resize-y min-h-[160px]"
+									></textarea>
+								</div>
+
+								<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+									<span class="flex items-center gap-1 text-emerald-700">
+										<Save class="w-3 h-3 text-emerald-600" />
+										Jawaban otomatis tersimpan saat Anda mengetik atau berpindah nomor.
+									</span>
+									<span class="{currentAnswer.trim() ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
+										{currentAnswer.trim() ? '✓ Terisi' : 'Belum diisi'}
+									</span>
+								</div>
 							</div>
 
 							<!-- Navigation -->
@@ -552,7 +594,8 @@
 
 						<div class="grid grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
 							{#each questions as q, idx}
-								{@const isAns = !!answers[q.id]}
+								{@const ans = answers[q.id]}
+								{@const isAns = ans && typeof ans === 'string' && ans.trim().length > 0}
 								{@const isCurr = idx === currentIndex}
 								<button
 									type="button"
@@ -592,10 +635,8 @@
 			</div>
 		</main>
 
-	<!-- STATE 3: HASIL PENILAIAN LENGKAP -->
+	<!-- STATE 3: SUBMISSION COMPLETED -->
 	{:else}
-		{@const isPassed = quizResult.score >= 65}
-
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 			<!-- Header Buttons -->
 			<div class="mb-6 flex items-center justify-between">
@@ -606,17 +647,17 @@
 
 				<Button variant="outline" size="sm" onclick={() => window.print()}>
 					<Printer class="w-4 h-4 mr-1.5" />
-					<span>Cetak Hasil</span>
+					<span>Cetak Bukti Pengerjaan</span>
 				</Button>
 			</div>
 
 			<!-- Result Card -->
 			<Card class="overflow-hidden border-slate-200 shadow-xl mb-8">
-				<div class="p-6 sm:p-8 {isPassed ? 'bg-linear-to-r from-emerald-700 to-teal-800' : 'bg-linear-to-r from-slate-800 to-slate-900'} text-white">
+				<div class="p-6 sm:p-8 bg-linear-to-r from-emerald-700 to-teal-800 text-white">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 						<div>
 							<div class="flex items-center gap-2 mb-2">
-								<Badge variant="emerald" size="sm">Laporan Hasil Quiz</Badge>
+								<Badge variant="emerald" size="sm">Laporan Submisi Quiz Essai</Badge>
 								<span class="text-xs text-emerald-100 font-semibold">Kaderisasi Tingkat I</span>
 							</div>
 							<h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">{quizResult.studentName}</h1>
@@ -626,14 +667,9 @@
 						</div>
 
 						<div class="shrink-0">
-							<div class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full {isPassed ? 'bg-white/20 text-white' : 'bg-amber-400/20 text-amber-200'} text-xs font-bold backdrop-blur-md">
-								{#if isPassed}
-									<CheckCircle2 class="w-4 h-4 text-emerald-300" />
-									<span>LULUS KADERISASI TINGKAT I</span>
-								{:else}
-									<Clock class="w-4 h-4 text-amber-300" />
-									<span>PERLU PEMBINAAN LANJUTAN</span>
-								{/if}
+							<div class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/20 text-white text-xs font-bold backdrop-blur-md">
+								<CheckCircle2 class="w-4 h-4 text-emerald-300" />
+								<span>JAWABAN BERHASIL DISERAHKAN</span>
 							</div>
 						</div>
 					</div>
@@ -641,44 +677,49 @@
 
 				<div class="p-6 sm:p-8 bg-white space-y-6">
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-						<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
-							<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nilai Akhir</p>
-							<div class="my-2">
-								<span class="text-5xl font-black {isPassed ? 'text-emerald-600' : 'text-slate-800'} tracking-tight">{quizResult.score}</span>
-								<span class="text-slate-400 font-bold text-sm">/100</span>
-							</div>
-							<Badge variant={isPassed ? 'emerald' : 'amber'} size="sm" class="self-center">
-								{isPassed ? 'Memenuhi Standar' : 'Belum Memenuhi'}
-							</Badge>
-						</div>
-
 						<div class="p-6 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 flex flex-col justify-center">
 							<div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
 								<CheckCircle2 class="w-5 h-5" />
 							</div>
-							<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Jawaban Benar</p>
-							<p class="text-3xl font-extrabold text-emerald-700 mt-1">{quizResult.correctCount}</p>
-							<p class="text-[11px] text-emerald-600 mt-0.5">dari {quizResult.totalQuestions} soal</p>
+							<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Soal Terjawab</p>
+							<p class="text-3xl font-extrabold text-emerald-700 mt-1">{quizResult.answeredCount || quizResult.correctCount}</p>
+							<p class="text-[11px] text-emerald-600 mt-0.5">dari {quizResult.totalQuestions} butir essai</p>
 						</div>
 
-						<div class="p-6 bg-rose-50/60 rounded-2xl border border-rose-200/80 flex flex-col justify-center">
-							<div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto mb-2">
-								<XCircle class="w-5 h-5" />
+						<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
+							<div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center mx-auto mb-2">
+								<Clock class="w-5 h-5" />
 							</div>
-							<p class="text-xs font-bold text-rose-800 uppercase tracking-wider">Jawaban Salah</p>
-							<p class="text-3xl font-extrabold text-rose-700 mt-1">{quizResult.wrongCount}</p>
-							<p class="text-[11px] text-rose-600 mt-0.5">dari {quizResult.totalQuestions} soal</p>
+							<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Evaluasi</p>
+							<p class="text-sm font-bold text-slate-800 mt-1">Menunggu Penilaian</p>
+							<p class="text-[11px] text-slate-500 mt-0.5">Oleh Admin Pengurus</p>
+						</div>
+
+						<div class="p-6 bg-teal-50/60 rounded-2xl border border-teal-200/80 flex flex-col justify-center">
+							<div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mx-auto mb-2">
+								<FileText class="w-5 h-5" />
+							</div>
+							<p class="text-xs font-bold text-teal-800 uppercase tracking-wider">Tipe Ujian</p>
+							<p class="text-lg font-extrabold text-teal-800 mt-1">30 Soal Essai</p>
+							<p class="text-[11px] text-teal-600 mt-0.5">HIMA FST UT Bandung</p>
 						</div>
 					</div>
 
-					<div class="pt-4 border-t border-slate-100 text-center">
+					<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3 text-xs text-slate-600">
+						<ShieldAlert class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+						<span>
+							Jawaban Anda telah tercatat dengan aman di database. Tim Pengurus HIMA FST UT Bandung akan memeriksa jawaban essai Anda berdasarkan pedoman penilaian resmi.
+						</span>
+					</div>
+
+					<div class="pt-2 text-center">
 						<Button
 							variant="primary"
 							size="md"
 							onclick={() => showDetailedReview = !showDetailedReview}
 						>
 							<FileText class="w-4 h-4 mr-2" />
-							<span>{showDetailedReview ? 'Sembunyikan Pembahasan' : 'Lihat Kunci & Pembahasan Lengkap (1–30)'}</span>
+							<span>{showDetailedReview ? 'Sembunyikan Lembar Jawaban' : 'Lihat Ringkasan Jawaban Essai yang Dikirim (1–30)'}</span>
 						</Button>
 					</div>
 				</div>
@@ -690,71 +731,52 @@
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 							<FileText class="w-5 h-5 text-emerald-600" />
-							<span>Pembahasan Soal Nomor 1–30</span>
+							<span>Lembar Jawaban Essai Nomor 1–30</span>
 						</h2>
-						<span class="text-xs text-slate-500">Kunci Jawaban Resmi HIMA FST</span>
+						<span class="text-xs text-slate-500">Tersimpan di Database</span>
 					</div>
 
 					{#each quizResult.answersBreakdown as item}
-						{@const isCorrect = item.isCorrect}
-						{@const isAnswered = item.studentAnswer !== null}
+						{@const isAnswered = item.studentAnswer && item.studentAnswer.trim() !== ''}
 
-						<Card class="border {isCorrect ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'}">
+						<Card class="border border-slate-200 bg-white">
 							<div class="flex items-start justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
 								<div class="flex items-center gap-2">
-									<span class="w-7 h-7 rounded-lg {isCorrect ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'} flex items-center justify-center font-bold text-xs">
+									<span class="w-7 h-7 rounded-lg {isAnswered ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'} flex items-center justify-center font-bold text-xs">
 										{item.questionNumber}
 									</span>
-									<Badge variant={isCorrect ? 'emerald' : 'rose'} size="sm">
+									<Badge variant="emerald" size="sm">
 										{item.section}
 									</Badge>
 								</div>
 
-								<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
-									{#if isCorrect}
+								<div class="flex items-center gap-1.5 text-xs font-bold {isAnswered ? 'text-emerald-700' : 'text-slate-400'}">
+									{#if isAnswered}
 										<Check class="w-4 h-4 stroke-[3]" />
-										<span>BENAR (+1)</span>
-									{:else if !isAnswered}
-										<X class="w-4 h-4 stroke-[3]" />
-										<span>TIDAK DIJAWAB (0)</span>
+										<span>DIJAWAB</span>
 									{:else}
-										<X class="w-4 h-4 stroke-[3]" />
-										<span>SALAH (0)</span>
+										<span>TIDAK DIJAWAB</span>
 									{/if}
 								</div>
 							</div>
 
-							<p class="text-sm font-semibold text-slate-900 mb-4 whitespace-pre-line">
+							<p class="text-sm font-semibold text-slate-900 mb-3 whitespace-pre-line">
 								{item.questionText}
 							</p>
 
-							<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
-								{#each [
-									{ key: 'A', text: item.optionA },
-									{ key: 'B', text: item.optionB },
-									{ key: 'C', text: item.optionC },
-									{ key: 'D', text: item.optionD }
-								] as opt}
-									{@const isStudentChoice = item.studentAnswer === opt.key}
-									{@const isKey = item.correctAnswer === opt.key}
-
-									<div class="p-2.5 rounded-xl border flex items-start gap-2 {isKey ? 'bg-emerald-100/70 border-emerald-300 font-semibold text-emerald-950' : isStudentChoice && !isCorrect ? 'bg-rose-100/70 border-rose-300 font-semibold text-rose-950' : 'bg-white border-slate-200 text-slate-700'}">
-										<span class="w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] shrink-0 {isKey ? 'bg-emerald-600 text-white' : isStudentChoice ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-600'}">
-											{opt.key}
-										</span>
-										<span class="flex-1 leading-tight">{opt.text}</span>
-										{#if isKey}
-											<span class="text-[10px] font-bold text-emerald-700 shrink-0">KUNCI</span>
-										{:else if isStudentChoice}
-											<span class="text-[10px] font-bold text-rose-700 shrink-0">PILIHAN ANDA</span>
-										{/if}
-									</div>
-								{/each}
+							<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 mb-3">
+								<p class="font-bold text-slate-600 mb-1 flex items-center gap-1.5">
+									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
+									<span>Jawaban Anda:</span>
+								</p>
+								<p class="whitespace-pre-line leading-relaxed {isAnswered ? 'text-slate-800' : 'italic text-slate-400'}">
+									{item.studentAnswer || '(Tidak ada jawaban ditulis)'}
+								</p>
 							</div>
 
 							{#if item.explanation}
-								<div class="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-600">
-									<strong class="text-emerald-800">Pembahasan:</strong> {item.explanation}
+								<div class="p-3 bg-emerald-50/40 rounded-xl border border-emerald-100 text-xs text-slate-600">
+									<strong class="text-emerald-800">Catatan/Pembahasan:</strong> {item.explanation}
 								</div>
 							{/if}
 						</Card>
@@ -766,10 +788,10 @@
 </div>
 
 <!-- Review Modal -->
-<Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal)" maxWidth="xl">
+<Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal Essai)" maxWidth="xl">
 	<div class="space-y-4">
 		<p class="text-xs text-slate-600">
-			Klik salah satu nomor untuk memeriksa kembali sebelum mengirim kuis.
+			Periksa kelengkapan jawaban essai Anda untuk masing-masing butir soal sebelum mengirim kuis.
 		</p>
 
 		<div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs font-semibold">
@@ -780,14 +802,15 @@
 		<div class="grid grid-cols-6 sm:grid-cols-10 gap-2 max-h-[300px] overflow-y-auto p-1">
 			{#each questions as q, idx}
 				{@const ans = answers[q.id]}
+				{@const isAns = ans && typeof ans === 'string' && ans.trim().length > 0}
 				<button
 					type="button"
-					class="p-2 rounded-xl text-center border transition-all cursor-pointer {ans ? 'bg-emerald-50 border-emerald-300 text-emerald-900 hover:bg-emerald-100' : 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'}"
+					class="p-2 rounded-xl text-center border transition-all cursor-pointer {isAns ? 'bg-emerald-50 border-emerald-300 text-emerald-900 hover:bg-emerald-100' : 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'}"
 					onclick={() => goToQuestion(idx)}
 				>
 					<span class="block text-xs font-bold">{idx + 1}</span>
-					<span class="block text-[10px] font-mono mt-0.5 {ans ? 'font-black text-emerald-700' : 'text-rose-500'}">
-						{ans || '-'}
+					<span class="block text-[10px] font-mono mt-0.5 {isAns ? 'font-bold text-emerald-700' : 'text-rose-500'}">
+						{isAns ? 'Isi' : '-'}
 					</span>
 				</button>
 			{/each}
@@ -816,7 +839,7 @@
 	bind:open={confirmSubmitOpen}
 	title="Kirim Jawaban Quiz Kaderisasi?"
 	message={isAllAnswered
-		? "Seluruh 30 soal telah Anda jawab. Apakah Anda yakin ingin mengirim quiz dan melihat nilai sekarang?"
+		? "Seluruh 30 soal essai telah Anda jawab. Apakah Anda yakin ingin mengirim quiz sekarang?"
 		: `Perhatian: Anda baru menjawab ${answeredCount} dari 30 soal (${totalQuestions - answeredCount} belum dijawab). Apakah Anda yakin ingin mengirim quiz sekarang?`}
 	confirmText="Ya, Kirim Quiz"
 	cancelText="Periksa Lagi"

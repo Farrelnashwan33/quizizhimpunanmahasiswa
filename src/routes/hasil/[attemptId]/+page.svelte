@@ -17,7 +17,8 @@
 		Check,
 		X,
 		FileText,
-		Printer
+		Printer,
+		PenLine
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -27,8 +28,9 @@
 	const answers = $derived(data.answers || []);
 	const canReviewAnswers = $derived(data.canReviewAnswers);
 
-	const score = $derived(attempt.score ?? 0);
-	const isPassed = $derived(score >= 65); // Passing grade 65
+	const score = $derived(attempt.score);
+	const isGraded = $derived(score !== null && score !== undefined);
+	const isPassed = $derived(isGraded && typeof score === 'number' && score >= 65);
 
 	// Calculate duration
 	const durationText = $derived(() => {
@@ -47,9 +49,7 @@
 					spread: 70,
 					origin: { y: 0.6 }
 				});
-			} catch (e) {
-				// Canvas confetti fallback
-			}
+			} catch (e) {}
 		}
 	});
 
@@ -57,7 +57,7 @@
 </script>
 
 <svelte:head>
-	<title>Hasil Quiz Kaderisasi I - {student?.fullName || 'Peserta'}</title>
+	<title>Hasil Quiz Kaderisasi I (Essai) - {student?.fullName || 'Peserta'}</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -70,18 +70,18 @@
 
 		<Button variant="ghost" size="sm" onclick={() => window.print()} class="print:hidden">
 			<Printer class="w-4 h-4 mr-1.5" />
-			<span>Cetak Hasil</span>
+			<span>Cetak Bukti Hasil</span>
 		</Button>
 	</div>
 
 	<!-- Main Score Result Card -->
 	<Card class="overflow-hidden border-slate-200 shadow-xl mb-8">
 		<!-- Header Banner -->
-		<div class="p-6 sm:p-8 {isPassed ? 'bg-linear-to-r from-emerald-700 to-teal-800' : 'bg-linear-to-r from-slate-800 to-slate-900'} text-white relative">
+		<div class="p-6 sm:p-8 {isPassed ? 'bg-linear-to-r from-emerald-700 to-teal-800' : isGraded ? 'bg-linear-to-r from-slate-800 to-slate-900' : 'bg-linear-to-r from-teal-700 to-emerald-800'} text-white relative">
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
-						<Badge variant="emerald" size="sm">Laporan Evaluasi</Badge>
+						<Badge variant="emerald" size="sm">Laporan Evaluasi Quiz Essai</Badge>
 						<span class="text-xs text-emerald-100 font-semibold">{quiz.title}</span>
 					</div>
 					<h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">{student?.fullName}</h1>
@@ -91,13 +91,16 @@
 				</div>
 
 				<div class="shrink-0 text-center sm:text-right">
-					<div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full {isPassed ? 'bg-white/20 text-white' : 'bg-amber-400/20 text-amber-200'} text-xs font-bold backdrop-blur-md">
+					<div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full {isPassed ? 'bg-white/20 text-white' : isGraded ? 'bg-amber-400/20 text-amber-200' : 'bg-white/20 text-white'} text-xs font-bold backdrop-blur-md">
 						{#if isPassed}
 							<CheckCircle2 class="w-4 h-4 text-emerald-300" />
 							<span>Lulus Kaderisasi Tingkat I</span>
-						{:else}
+						{:else if isGraded}
 							<Clock class="w-4 h-4 text-amber-300" />
 							<span>Perlu Pembinaan Lanjutan</span>
+						{:else}
+							<CheckCircle2 class="w-4 h-4 text-emerald-300" />
+							<span>Jawaban Telah Diserahkan</span>
 						{/if}
 					</div>
 				</div>
@@ -107,37 +110,31 @@
 		<!-- Main Stats Grid -->
 		<div class="p-6 sm:p-8 bg-white space-y-6">
 			<!-- Big Score Display -->
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
 				<!-- Score -->
 				<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
 					<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nilai Akhir</p>
 					<div class="my-2">
-						<span class="text-5xl font-black {isPassed ? 'text-emerald-600' : 'text-slate-800'} tracking-tight">{score}</span>
-						<span class="text-slate-400 font-bold text-sm">/100</span>
+						{#if isGraded}
+							<span class="text-5xl font-black {isPassed ? 'text-emerald-600' : 'text-slate-800'} tracking-tight">{score}</span>
+							<span class="text-slate-400 font-bold text-sm">/100</span>
+						{:else}
+							<span class="text-2xl font-bold text-emerald-700">Dalam Evaluasi</span>
+						{/if}
 					</div>
-					<Badge variant={isPassed ? 'emerald' : 'amber'} size="sm" class="self-center">
-						{isPassed ? 'Sangat Baik' : 'Cukup'}
+					<Badge variant={isPassed ? 'emerald' : isGraded ? 'amber' : 'emerald'} size="sm" class="self-center">
+						{isPassed ? 'Lulus KKM' : isGraded ? 'Belum Memenuhi' : 'Menunggu Koreksi'}
 					</Badge>
 				</div>
 
-				<!-- Benar -->
+				<!-- Soal Terjawab -->
 				<div class="p-6 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 flex flex-col justify-center">
 					<div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
 						<CheckCircle2 class="w-5 h-5" />
 					</div>
-					<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Jawaban Benar</p>
-					<p class="text-3xl font-extrabold text-emerald-700 mt-1">{attempt.correctCount}</p>
-					<p class="text-[11px] text-emerald-600 mt-0.5">dari {attempt.totalQuestions} soal</p>
-				</div>
-
-				<!-- Salah -->
-				<div class="p-6 bg-rose-50/60 rounded-2xl border border-rose-200/80 flex flex-col justify-center">
-					<div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto mb-2">
-						<XCircle class="w-5 h-5" />
-					</div>
-					<p class="text-xs font-bold text-rose-800 uppercase tracking-wider">Jawaban Salah</p>
-					<p class="text-3xl font-extrabold text-rose-700 mt-1">{attempt.wrongCount}</p>
-					<p class="text-[11px] text-rose-600 mt-0.5">dari {attempt.totalQuestions} soal</p>
+					<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Tipe Soal</p>
+					<p class="text-2xl font-extrabold text-emerald-700 mt-1">30 Soal Essai</p>
+					<p class="text-[11px] text-emerald-600 mt-0.5">Kaderisasi Tingkat I</p>
 				</div>
 
 				<!-- Durasi -->
@@ -162,12 +159,12 @@
 						onclick={() => showDetailedAnswers = !showDetailedAnswers}
 					>
 						<FileText class="w-4 h-4 mr-2 text-emerald-600" />
-						<span>{showDetailedAnswers ? 'Sembunyikan Pembahasan Soal' : 'Lihat Detail & Pembahasan Soal (1–30)'}</span>
+						<span>{showDetailedAnswers ? 'Sembunyikan Lembar Jawaban' : 'Lihat Detail Lembar Jawaban Essai (1–30)'}</span>
 					</Button>
 				</div>
 			{:else}
 				<div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-500">
-					Kunci jawaban dan pembahasan ditutup sementara oleh pengurus HIMA hingga seluruh sesi kaderisasi berakhir.
+					Kunci pedoman jawaban dan pembahasan ditinjau oleh pengurus HIMA FST UT Bandung.
 				</div>
 			{/if}
 		</div>
@@ -179,68 +176,60 @@
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 					<FileText class="w-5 h-5 text-emerald-600" />
-					<span>Detail Jawaban 30 Soal</span>
+					<span>Lembar Jawaban Essai (1–30)</span>
 				</h2>
-				<span class="text-xs text-slate-500">Kunci Jawaban Resmi Panitia</span>
+				<span class="text-xs text-slate-500">Tersimpan di Database</span>
 			</div>
 
 			{#each answers as ans, idx}
 				{@const q = ans.question}
-				{@const isCorrect = ans.isCorrect}
+				{@const studentText = ans.studentAnswer}
+				{@const isAnswered = studentText && studentText.trim() !== ''}
 
-				<Card class="border {isCorrect ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'}">
+				<Card class="border border-slate-200 bg-white">
 					<div class="flex items-start justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
 						<div class="flex items-center gap-2">
-							<span class="w-7 h-7 rounded-lg {isCorrect ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'} flex items-center justify-center font-bold text-xs">
+							<span class="w-7 h-7 rounded-lg {isAnswered ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'} flex items-center justify-center font-bold text-xs">
 								{q?.questionNumber || idx + 1}
 							</span>
-							<Badge variant={isCorrect ? 'emerald' : 'rose'} size="sm">
+							<Badge variant="emerald" size="sm">
 								{q?.section || 'Materi'}
 							</Badge>
 						</div>
 
-						<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
-							{#if isCorrect}
+						<div class="flex items-center gap-1.5 text-xs font-bold {isAnswered ? 'text-emerald-700' : 'text-slate-400'}">
+							{#if isAnswered}
 								<Check class="w-4 h-4 stroke-[3]" />
-								<span>BENAR (+1)</span>
+								<span>DIJAWAB</span>
 							{:else}
-								<X class="w-4 h-4 stroke-[3]" />
-								<span>SALAH (0)</span>
+								<span>TIDAK DIJAWAB</span>
 							{/if}
 						</div>
 					</div>
 
 					<!-- Question text -->
-					<p class="text-sm font-semibold text-slate-900 mb-4 whitespace-pre-line">
+					<p class="text-sm font-semibold text-slate-900 mb-3 whitespace-pre-line">
 						{q?.questionText}
 					</p>
 
-					<!-- Options list -->
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
-						{#each [
-							{ key: 'A', text: q?.optionA },
-							{ key: 'B', text: q?.optionB },
-							{ key: 'C', text: q?.optionC },
-							{ key: 'D', text: q?.optionD }
-						] as opt}
-							{@const isStudentChoice = ans.selectedAnswer === opt.key}
-							{@const isKeyAnswer = q?.correctAnswer === opt.key}
-
-							<div class="p-2.5 rounded-xl border flex items-start gap-2 {isKeyAnswer ? 'bg-emerald-100/70 border-emerald-300 font-semibold text-emerald-950' : isStudentChoice && !isCorrect ? 'bg-rose-100/70 border-rose-300 font-semibold text-rose-950' : 'bg-white border-slate-200 text-slate-700'}">
-								<span class="w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] shrink-0 {isKeyAnswer ? 'bg-emerald-600 text-white' : isStudentChoice ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-600'}">
-									{opt.key}
-								</span>
-								<span class="flex-1 leading-tight">{opt.text}</span>
-								{#if isKeyAnswer}
-									<span class="text-[10px] font-bold text-emerald-700 shrink-0">KUNCI</span>
-								{:else if isStudentChoice}
-									<span class="text-[10px] font-bold text-rose-700 shrink-0">PILIHAN ANDA</span>
-								{/if}
-							</div>
-						{/each}
+					<!-- Student essay response -->
+					<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 mb-3">
+						<p class="font-bold text-slate-600 mb-1 flex items-center gap-1.5">
+							<PenLine class="w-3.5 h-3.5 text-emerald-600" />
+							<span>Jawaban Essai Anda:</span>
+						</p>
+						<p class="whitespace-pre-line leading-relaxed {isAnswered ? 'text-slate-800' : 'italic text-slate-400'}">
+							{studentText || '(Tidak ada jawaban ditulis)'}
+						</p>
 					</div>
 
-					<!-- Explanation -->
+					<!-- Official answer key guideline & Explanation -->
+					{#if q?.correctAnswer}
+						<div class="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 text-xs text-slate-700 mb-2">
+							<strong class="text-emerald-800">Pedoman Jawaban:</strong> {q.correctAnswer}
+						</div>
+					{/if}
+
 					{#if q?.explanation}
 						<div class="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-600">
 							<strong class="text-emerald-800">Pembahasan:</strong> {q.explanation}

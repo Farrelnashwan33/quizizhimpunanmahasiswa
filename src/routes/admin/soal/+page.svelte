@@ -16,7 +16,9 @@
 		Check,
 		FileText,
 		CheckCircle2,
-		AlertCircle
+		AlertCircle,
+		PenLine,
+		ShieldCheck
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -38,11 +40,7 @@
 	let editNumber = $state(1);
 	let editSection = $state('Nilai dan Karakter Dasar');
 	let editText = $state('');
-	let editOptA = $state('');
-	let editOptB = $state('');
-	let editOptC = $state('');
-	let editOptD = $state('');
-	let editCorrect = $state('B');
+	let editCorrect = $state('');
 	let editExplanation = $state('');
 
 	function openEditModal(q: any) {
@@ -51,11 +49,7 @@
 		editNumber = q.questionNumber;
 		editSection = q.section;
 		editText = q.questionText;
-		editOptA = q.optionA;
-		editOptB = q.optionB;
-		editOptC = q.optionC;
-		editOptD = q.optionD;
-		editCorrect = q.correctAnswer;
+		editCorrect = q.correctAnswer || '';
 		editExplanation = q.explanation || '';
 		editModalOpen = true;
 	}
@@ -75,7 +69,7 @@
 </script>
 
 <svelte:head>
-	<title>Kelola Soal Quiz (CRUD) - Admin HIMA FST UT Bandung</title>
+	<title>Kelola Soal Quiz Essai (CRUD) - Admin HIMA FST UT Bandung</title>
 </svelte:head>
 
 <div class="space-y-6">
@@ -83,30 +77,30 @@
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
 		<div>
 			<div class="flex items-center gap-2 mb-1">
-				<Badge variant="emerald" size="sm">Bank Soal</Badge>
+				<Badge variant="emerald" size="sm">Bank Soal Essai</Badge>
 				<span class="text-xs text-slate-400">Total: {questions.length} Butir Soal</span>
 			</div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-				Manajemen Soal Quiz Kaderisasi
+				Manajemen Soal Quiz Essai Kaderisasi
 			</h1>
 			<p class="text-xs sm:text-sm text-slate-400 mt-1">
-				Tambah, perbarui teks pertanyaan, pilihan opsi A–D, kunci jawaban, atau pembahasan soal.
+				Tambah, perbarui pertanyaan essai, pedoman jawaban resmi, atau pembahasan materi.
 			</p>
 		</div>
 
 		<div class="flex items-center gap-3">
 			<Button variant="primary" size="md" onclick={() => createModalOpen = true}>
 				<Plus class="w-4 h-4 mr-2" />
-				<span>Tambah Soal Baru</span>
+				<span>Tambah Soal Essai</span>
 			</Button>
 		</div>
 	</div>
 
-	<!-- Filter by Category Section -->
-	<div class="flex flex-wrap items-center gap-2 pb-2">
+	<!-- Section Filter Tabs -->
+	<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
 		<button
 			type="button"
-			class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer {!currentSection ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}"
+			class="px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer {!currentSection ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'}"
 			onclick={() => handleFilterSection('')}
 		>
 			Semua Kategori ({questions.length})
@@ -114,7 +108,7 @@
 		{#each sections as sec}
 			<button
 				type="button"
-				class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer {currentSection === sec ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}"
+				class="px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer {currentSection === sec ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'}"
 				onclick={() => handleFilterSection(sec)}
 			>
 				{sec}
@@ -122,31 +116,29 @@
 		{/each}
 	</div>
 
-	<!-- Questions List Cards -->
+	<!-- Question List -->
 	<div class="space-y-4">
 		{#if questions.length > 0}
-			{#each questions as q (q.id)}
-				<div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 hover:border-slate-700 transition-colors">
-					<!-- Card Header -->
+			{#each questions as q}
+				<div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700/80 transition-all space-y-4 shadow-md">
+					<!-- Top Row -->
 					<div class="flex items-start justify-between gap-4 pb-3 border-b border-slate-800">
-						<div class="flex items-center gap-3">
-							<span class="w-8 h-8 rounded-xl emerald-gradient text-white flex items-center justify-center font-bold text-sm">
+						<div class="flex items-center gap-2.5">
+							<span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
 								{q.questionNumber}
 							</span>
 							<div>
-								<span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-1 rounded-lg">
-									{q.section}
-								</span>
+								<span class="text-xs font-bold text-emerald-400">{q.section}</span>
+								<span class="text-xs text-slate-500 ml-2">• Soal Essai</span>
 							</div>
 						</div>
 
-						<!-- Action Buttons -->
 						<div class="flex items-center gap-2">
-							<Button variant="outline" size="sm" onclick={() => openEditModal(q)} class="bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700">
+							<Button variant="outline" size="sm" class="px-2.5 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750" onclick={() => openEditModal(q)}>
 								<Edit3 class="w-3.5 h-3.5 mr-1" />
-								Edit Soal
+								<span>Edit</span>
 							</Button>
-							<Button variant="danger" size="sm" onclick={() => openDeleteDialog(q)} class="bg-rose-950/60 border-rose-800 text-rose-300 hover:bg-rose-900">
+							<Button variant="outline" size="sm" class="px-2.5 bg-slate-800 border-slate-700 text-rose-400 hover:bg-rose-950/60 hover:text-rose-300" onclick={() => openDeleteDialog(q)}>
 								<Trash2 class="w-3.5 h-3.5" />
 							</Button>
 						</div>
@@ -157,25 +149,13 @@
 						{q.questionText}
 					</p>
 
-					<!-- Options 2x2 Grid -->
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-						{#each [
-							{ key: 'A', text: q.optionA },
-							{ key: 'B', text: q.optionB },
-							{ key: 'C', text: q.optionC },
-							{ key: 'D', text: q.optionD }
-						] as opt}
-							{@const isKey = q.correctAnswer === opt.key}
-							<div class="p-3 rounded-xl border flex items-start gap-2.5 {isKey ? 'bg-emerald-950/70 border-emerald-500 text-white font-semibold' : 'bg-slate-850 border-slate-750 text-slate-300'}">
-								<span class="w-5 h-5 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0 {isKey ? 'bg-emerald-600 text-white' : 'bg-slate-750 text-slate-400'}">
-									{opt.key}
-								</span>
-								<span class="flex-1 leading-snug">{opt.text}</span>
-								{#if isKey}
-									<span class="text-[10px] font-bold text-emerald-400 bg-emerald-900/80 px-1.5 py-0.5 rounded shrink-0">KUNCI ({opt.key})</span>
-								{/if}
-							</div>
-						{/each}
+					<!-- Essay Rubric Guideline -->
+					<div class="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs">
+						<div class="flex items-center gap-1.5 text-emerald-400 font-bold mb-1">
+							<ShieldCheck class="w-3.5 h-3.5" />
+							<span>Pedoman Kunci Jawaban Essai:</span>
+						</div>
+						<p class="text-emerald-200 leading-relaxed font-medium">{q.correctAnswer}</p>
 					</div>
 
 					<!-- Explanation -->
@@ -195,7 +175,7 @@
 </div>
 
 <!-- Modal Tambah Soal Baru -->
-<Modal bind:open={createModalOpen} title="Tambah Soal Quiz Baru" maxWidth="2xl">
+<Modal bind:open={createModalOpen} title="Tambah Soal Essai Baru" maxWidth="2xl">
 	<form
 		action="?/create"
 		method="POST"
@@ -205,7 +185,7 @@
 				loadingAction = false;
 				if (result.type === 'success') {
 					createModalOpen = false;
-					toasts.success('Soal berhasil ditambahkan ke database.');
+					toasts.success('Soal essai berhasil ditambahkan.');
 				} else if (result.type === 'failure') {
 					toasts.error((result.data as any)?.error || 'Gagal menambahkan soal.');
 				}
@@ -248,63 +228,52 @@
 		</div>
 
 		<div>
-			<label for="new_questionText" class="block font-bold text-slate-700 mb-1">Pertanyaan / Soal *</label>
+			<label for="new_questionText" class="block font-bold text-slate-700 mb-1">Teks Pertanyaan Essai *</label>
 			<textarea
 				id="new_questionText"
 				name="questionText"
-				required
 				rows="3"
-				placeholder="Tuliskan kalimat pertanyaan di sini..."
-				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
+				required
+				placeholder="Tuliskan butir soal essai secara jelas..."
+				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
 			></textarea>
 		</div>
 
-		<!-- Options A, B, C, D -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-			<div>
-				<label for="new_optionA" class="block font-bold text-slate-700 mb-1">Pilihan A *</label>
-				<input type="text" id="new_optionA" name="optionA" required placeholder="Teks pilihan A" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
-			<div>
-				<label for="new_optionB" class="block font-bold text-slate-700 mb-1">Pilihan B *</label>
-				<input type="text" id="new_optionB" name="optionB" required placeholder="Teks pilihan B" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
-			<div>
-				<label for="new_optionC" class="block font-bold text-slate-700 mb-1">Pilihan C *</label>
-				<input type="text" id="new_optionC" name="optionC" required placeholder="Teks pilihan C" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
-			<div>
-				<label for="new_optionD" class="block font-bold text-slate-700 mb-1">Pilihan D *</label>
-				<input type="text" id="new_optionD" name="optionD" required placeholder="Teks pilihan D" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
+		<div>
+			<label for="new_correctAnswer" class="block font-bold text-slate-700 mb-1">Pedoman Kunci Jawaban Essai *</label>
+			<textarea
+				id="new_correctAnswer"
+				name="correctAnswer"
+				rows="3"
+				required
+				placeholder="Tuliskan pedoman jawaban resmi atau poin-poin yang harus ada pada jawaban..."
+				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
+			></textarea>
 		</div>
 
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-			<div>
-				<label for="new_correctAnswer" class="block font-bold text-slate-700 mb-1">Kunci Jawaban Benar *</label>
-				<select id="new_correctAnswer" name="correctAnswer" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs font-bold text-emerald-700">
-					<option value="A">Pilihan A</option>
-					<option value="B" selected>Pilihan B</option>
-					<option value="C">Pilihan C</option>
-					<option value="D">Pilihan D</option>
-				</select>
-			</div>
-
-			<div>
-				<label for="new_explanation" class="block font-bold text-slate-700 mb-1">Pembahasan / Penjelasan (Opsional)</label>
-				<input type="text" id="new_explanation" name="explanation" placeholder="Alasan mengapa jawaban tersebut benar" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
+		<div>
+			<label for="new_explanation" class="block font-bold text-slate-700 mb-1">Pembahasan Singkat (Opsional)</label>
+			<textarea
+				id="new_explanation"
+				name="explanation"
+				rows="2"
+				placeholder="Penjelasan latar belakang atau materi rujukan..."
+				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
+			></textarea>
 		</div>
 
-		<div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
-			<Button variant="outline" size="sm" onclick={() => createModalOpen = false}>Batal</Button>
-			<Button type="submit" variant="primary" size="sm" loading={loadingAction}>Simpan Soal</Button>
+		<div class="pt-4 border-t border-slate-200 flex items-center justify-end gap-2">
+			<Button type="button" variant="outline" size="sm" onclick={() => createModalOpen = false}>Batal</Button>
+			<Button type="submit" variant="primary" size="sm" loading={loadingAction}>
+				<Plus class="w-4 h-4 mr-1.5" />
+				<span>Simpan Soal Essai</span>
+			</Button>
 		</div>
 	</form>
 </Modal>
 
 <!-- Modal Edit Soal -->
-<Modal bind:open={editModalOpen} title="Edit Soal Quiz #{editNumber}" maxWidth="2xl">
+<Modal bind:open={editModalOpen} title="Edit Soal Essai #{editNumber}" maxWidth="2xl">
 	<form
 		action="?/update"
 		method="POST"
@@ -314,7 +283,7 @@
 				loadingAction = false;
 				if (result.type === 'success') {
 					editModalOpen = false;
-					toasts.success('Soal berhasil diperbarui.');
+					toasts.success('Soal essai berhasil diperbarui.');
 				} else if (result.type === 'failure') {
 					toasts.error((result.data as any)?.error || 'Gagal memperbarui soal.');
 				}
@@ -327,10 +296,10 @@
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 			<div>
-				<label for="edit_number" class="block font-bold text-slate-700 mb-1">Nomor Urut Soal *</label>
+				<label for="edit_questionNumber" class="block font-bold text-slate-700 mb-1">Nomor Urut Soal *</label>
 				<input
 					type="number"
-					id="edit_number"
+					id="edit_questionNumber"
 					name="questionNumber"
 					required
 					bind:value={editNumber}
@@ -358,82 +327,69 @@
 		</div>
 
 		<div>
-			<label for="edit_text" class="block font-bold text-slate-700 mb-1">Pertanyaan / Soal *</label>
+			<label for="edit_questionText" class="block font-bold text-slate-700 mb-1">Teks Pertanyaan Essai *</label>
 			<textarea
-				id="edit_text"
+				id="edit_questionText"
 				name="questionText"
-				required
 				rows="3"
+				required
 				bind:value={editText}
-				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
+				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
 			></textarea>
 		</div>
 
-		<!-- Options A, B, C, D -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-			<div>
-				<label for="edit_optA" class="block font-bold text-slate-700 mb-1">Pilihan A *</label>
-				<input type="text" id="edit_optA" name="optionA" required bind:value={editOptA} class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
-			<div>
-				<label for="edit_optB" class="block font-bold text-slate-700 mb-1">Pilihan B *</label>
-				<input type="text" id="edit_optB" name="optionB" required bind:value={editOptB} class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
-			<div>
-				<label for="edit_optC" class="block font-bold text-slate-700 mb-1">Pilihan C *</label>
-				<input type="text" id="edit_optC" name="optionC" required bind:value={editOptC} class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
-			<div>
-				<label for="edit_optD" class="block font-bold text-slate-700 mb-1">Pilihan D *</label>
-				<input type="text" id="edit_optD" name="optionD" required bind:value={editOptD} class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
+		<div>
+			<label for="edit_correctAnswer" class="block font-bold text-slate-700 mb-1">Pedoman Kunci Jawaban Essai *</label>
+			<textarea
+				id="edit_correctAnswer"
+				name="correctAnswer"
+				rows="3"
+				required
+				bind:value={editCorrect}
+				placeholder="Pedoman kunci jawaban resmi essai..."
+				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
+			></textarea>
 		</div>
 
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-			<div>
-				<label for="edit_correctAnswer" class="block font-bold text-slate-700 mb-1">Kunci Jawaban Benar *</label>
-				<select id="edit_correctAnswer" name="correctAnswer" required bind:value={editCorrect} class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs font-bold text-emerald-700">
-					<option value="A">Pilihan A</option>
-					<option value="B">Pilihan B</option>
-					<option value="C">Pilihan C</option>
-					<option value="D">Pilihan D</option>
-				</select>
-			</div>
-
-			<div>
-				<label for="edit_explanation" class="block font-bold text-slate-700 mb-1">Pembahasan / Penjelasan</label>
-				<input type="text" id="edit_explanation" name="explanation" bind:value={editExplanation} class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs" />
-			</div>
+		<div>
+			<label for="edit_explanation" class="block font-bold text-slate-700 mb-1">Pembahasan Singkat (Opsional)</label>
+			<textarea
+				id="edit_explanation"
+				name="explanation"
+				rows="2"
+				bind:value={editExplanation}
+				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
+			></textarea>
 		</div>
 
-		<div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
-			<Button variant="outline" size="sm" onclick={() => editModalOpen = false}>Batal</Button>
-			<Button type="submit" variant="primary" size="sm" loading={loadingAction}>Perbarui Soal</Button>
+		<div class="pt-4 border-t border-slate-200 flex items-center justify-end gap-2">
+			<Button type="button" variant="outline" size="sm" onclick={() => editModalOpen = false}>Batal</Button>
+			<Button type="submit" variant="primary" size="sm" loading={loadingAction}>
+				<Check class="w-4 h-4 mr-1.5" />
+				<span>Perbarui Soal Essai</span>
+			</Button>
 		</div>
 	</form>
 </Modal>
 
-<!-- Delete Dialog -->
+<!-- Delete Dialog Confirmation -->
 <ConfirmDialog
 	bind:open={deleteDialogOpen}
-	title="Hapus Soal #{selectedQuestion?.questionNumber}?"
-	message="Apakah Anda yakin ingin menghapus butir soal ini dari database? Tindakan ini tidak dapat dibatalkan."
-	confirmText="Hapus Soal"
+	title="Hapus Butir Soal Essai?"
+	message={`Apakah Anda yakin ingin menghapus soal nomor #${selectedQuestion?.questionNumber}? Tindakan ini tidak dapat dibatalkan.`}
+	confirmText="Ya, Hapus Soal"
+	cancelText="Batal"
 	variant="danger"
-	loading={loadingAction}
 	onconfirm={async () => {
-		loadingAction = true;
-		const form = new FormData();
-		form.append('id', selectedQuestion.id);
-
-		const res = await fetch('?/delete', {
-			method: 'POST',
-			body: form
-		});
-
-		loadingAction = false;
-		deleteDialogOpen = false;
-		toasts.success('Soal berhasil dihapus.');
-		goto('/admin/soal', { invalidateAll: true });
+		const formData = new FormData();
+		formData.append('id', selectedQuestion.id);
+		const res = await fetch('?/delete', { method: 'POST', body: formData });
+		if (res.ok) {
+			toasts.success('Soal berhasil dihapus.');
+			deleteDialogOpen = false;
+			window.location.reload();
+		} else {
+			toasts.error('Gagal menghapus soal.');
+		}
 	}}
 />

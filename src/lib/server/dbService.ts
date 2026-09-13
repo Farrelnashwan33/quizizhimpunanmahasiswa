@@ -32,14 +32,14 @@ export interface DetailedAnswerItem {
 	questionNumber: number;
 	section: string;
 	questionText: string;
-	optionA: string;
-	optionB: string;
-	optionC: string;
-	optionD: string;
+	optionA?: string;
+	optionB?: string;
+	optionC?: string;
+	optionD?: string;
 	studentAnswer: string | null;
 	correctAnswer: string;
-	isCorrect: boolean;
-	status: 'Benar' | 'Salah' | 'Belum Dijawab';
+	isCorrect: boolean | null;
+	status: 'Sesuai' | 'Perlu Evaluasi' | 'Sudah Dijawab' | 'Belum Dijawab' | string;
 	explanation: string | null;
 	answeredAt?: Date | string | null;
 }
@@ -495,12 +495,15 @@ export async function getQuizAttemptById(idOrNim: string) {
 			ans?.jawaban ||
 			ans?.studentAnswer ||
 			null
-		)?.toUpperCase() || null;
+		);
 
-		const isCorrect = studentChoice !== null && studentChoice === q.correctAnswer?.toUpperCase();
-		const status: 'Benar' | 'Salah' | 'Belum Dijawab' = studentChoice
-			? (isCorrect ? 'Benar' : 'Salah')
-			: 'Belum Dijawab';
+		const isGraded = ans?.isCorrect !== undefined && ans?.isCorrect !== null;
+		const isCorrect = isGraded ? Boolean(ans.isCorrect) : null;
+		const status: string = isGraded
+			? (isCorrect ? 'Sesuai' : 'Perlu Evaluasi')
+			: studentChoice && studentChoice.trim() !== ''
+				? 'Sudah Dijawab'
+				: 'Belum Dijawab';
 
 		return {
 			question: q,
@@ -885,7 +888,7 @@ export async function saveAnswer(data: {
 }
 
 /**
- * 8. SUBMIT QUIZ ATTEMPT
+ * 8. SUBMIT QUIZ ATTEMPT (ESSAI)
  */
 export async function submitQuizAttempt(data: {
 	attemptId?: string;
@@ -902,11 +905,11 @@ export async function submitQuizAttempt(data: {
 	const studentEmail = `${cleanNim}@student.ut.ac.id`;
 	const now = new Date();
 
-	let correctCount = 0;
+	let answeredCount = 0;
 	const answersBreakdown = OFFICIAL_30_QUESTIONS.map((q) => {
-		const studentChoice = (data.answers[q.id] || data.answers[q.questionNumber.toString()] || null)?.toUpperCase() || null;
-		const isCorrect = studentChoice !== null && studentChoice === q.correctAnswer.toUpperCase();
-		if (isCorrect) correctCount++;
+		const rawAns = data.answers[q.id] ?? data.answers[q.questionNumber.toString()] ?? data.answers[`num_${q.questionNumber}`] ?? null;
+		const studentChoice = typeof rawAns === 'string' && rawAns.trim() !== '' ? rawAns.trim() : null;
+		if (studentChoice !== null) answeredCount++;
 
 		return {
 			questionId: q.id,
@@ -919,15 +922,16 @@ export async function submitQuizAttempt(data: {
 			optionD: q.optionD,
 			studentAnswer: studentChoice,
 			correctAnswer: q.correctAnswer,
-			isCorrect,
+			isCorrect: null as boolean | null,
 			explanation: q.explanation
 		};
 	});
 
 	const totalQuestions = OFFICIAL_30_QUESTIONS.length;
-	const wrongCount = totalQuestions - correctCount;
-	const rawScore = (correctCount / totalQuestions) * 100;
-	const score = Math.round(rawScore * 100) / 100;
+	// Initial score: null or pending until graded by Admin
+	const score: number | null = null;
+	const correctCount = 0;
+	const wrongCount = 0;
 
 	let attemptId = data.attemptId || 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
 	let studentId = 'std-' + cleanNim;
@@ -997,14 +1001,12 @@ export async function submitQuizAttempt(data: {
 								},
 								update: {
 									selectedAnswer: item.studentAnswer,
-									isCorrect: item.isCorrect,
 									answeredAt: now
 								},
 								create: {
 									attemptId,
 									questionId: item.questionId,
 									selectedAnswer: item.studentAnswer,
-									isCorrect: item.isCorrect,
 									answeredAt: now
 								}
 							});
@@ -1017,9 +1019,7 @@ export async function submitQuizAttempt(data: {
 					data: {
 						status: 'completed',
 						submittedAt: now,
-						score,
-						correctCount,
-						wrongCount,
+						score: targetAttempt.score ?? null,
 						totalQuestions
 					}
 				});
@@ -1058,9 +1058,6 @@ export async function submitQuizAttempt(data: {
 						student_id: studentId,
 						status: 'completed',
 						submitted_at: now.toISOString(),
-						score,
-						correct_count: correctCount,
-						wrong_count: wrongCount,
 						total_questions: totalQuestions
 					},
 					{ onConflict: 'id' }
@@ -1070,7 +1067,7 @@ export async function submitQuizAttempt(data: {
 
 			if (supaAtt) attemptId = supaAtt.id;
 
-			// Also insert / upsert answers into Supabase answers table
+			// Insert / upsert essay answers into Supabase answers table
 			for (const item of answersBreakdown) {
 				if (item.questionId && item.questionId.includes('-')) {
 					try {
@@ -1079,7 +1076,6 @@ export async function submitQuizAttempt(data: {
 								attempt_id: attemptId,
 								question_id: item.questionId,
 								selected_answer: item.studentAnswer,
-								is_correct: item.isCorrect,
 								answered_at: now.toISOString()
 							},
 							{ onConflict: 'attempt_id,question_id' }
@@ -1097,9 +1093,9 @@ export async function submitQuizAttempt(data: {
 		quizId,
 		studentId,
 		status: 'completed',
-		score,
-		correctCount,
-		wrongCount,
+		score: null,
+		correctCount: answeredCount,
+		wrongCount: totalQuestions - answeredCount,
 		totalQuestions,
 		startedAt: now,
 		submittedAt: now,
@@ -1128,11 +1124,125 @@ export async function submitQuizAttempt(data: {
 		studentName: cleanName,
 		nim: cleanNim,
 		programStudi: cleanProdi,
-		score,
-		correctCount,
-		wrongCount,
+		score: null,
+		answeredCount,
+		correctCount: answeredCount,
+		wrongCount: totalQuestions - answeredCount,
 		totalQuestions,
 		submittedAt: now.toISOString(),
 		answersBreakdown
+	};
+}
+
+/**
+ * 9. GRADE ESSAY QUIZ ATTEMPT (ADMIN MANUAL EVALUATION)
+ */
+export async function gradeQuizAttempt(data: {
+	attemptId: string;
+	score: number;
+	feedback?: string | null;
+	questionGrades?: Array<{
+		questionId: string;
+		isCorrect?: boolean | null;
+		score?: number;
+	}>;
+}) {
+	const { attemptId, score, feedback, questionGrades } = data;
+	const roundedScore = Math.max(0, Math.min(100, Math.round(score * 10) / 10));
+
+	let correctCount = 0;
+	let wrongCount = 0;
+
+	if (questionGrades && questionGrades.length > 0) {
+		for (const q of questionGrades) {
+			if (q.isCorrect === true) correctCount++;
+			else if (q.isCorrect === false) wrongCount++;
+		}
+	}
+
+	// 1. Update in Prisma
+	if (isDatabaseConfigured && attemptId.includes('-')) {
+		try {
+			await prisma.quizAttempt.update({
+				where: { id: attemptId },
+				data: {
+					score: roundedScore,
+					correctCount: correctCount || undefined,
+					wrongCount: wrongCount || undefined,
+					status: 'completed'
+				}
+			});
+
+			if (questionGrades && questionGrades.length > 0) {
+				for (const q of questionGrades) {
+					if (q.questionId && q.questionId.includes('-')) {
+						try {
+							await prisma.answer.updateMany({
+								where: {
+									attemptId,
+									questionId: q.questionId
+								},
+								data: {
+									isCorrect: q.isCorrect ?? undefined
+								}
+							});
+						} catch (e) {}
+					}
+				}
+			}
+		} catch (err) {
+			console.warn('Prisma grade notice:', err);
+		}
+	}
+
+	// 2. Update in Supabase
+	if (isSupabaseConfigured && attemptId.includes('-')) {
+		try {
+			await supabaseAdmin
+				.from('quiz_attempts')
+				.update({
+					score: roundedScore,
+					correct_count: correctCount || undefined,
+					wrong_count: wrongCount || undefined,
+					status: 'completed'
+				})
+				.eq('id', attemptId);
+
+			if (questionGrades && questionGrades.length > 0) {
+				for (const q of questionGrades) {
+					if (q.questionId && q.questionId.includes('-')) {
+						try {
+							await supabaseAdmin
+								.from('answers')
+								.update({
+									is_correct: q.isCorrect
+								})
+								.eq('attempt_id', attemptId)
+								.eq('question_id', q.questionId);
+						} catch (e) {}
+					}
+				}
+			}
+		} catch (supaErr) {
+			console.warn('Supabase grade notice:', supaErr);
+		}
+	}
+
+	// 3. Update Memory attempts
+	const memoryAttempts = getMemoryAttempts();
+	const existing = memoryAttempts.find((a) => a.id === attemptId);
+	if (existing) {
+		existing.score = roundedScore;
+		existing.status = 'completed';
+		if (correctCount) existing.correctCount = correctCount;
+		if (wrongCount) existing.wrongCount = wrongCount;
+		recordAttempt(existing);
+	}
+
+	return {
+		success: true,
+		attemptId,
+		score: roundedScore,
+		message: 'Penilaian essai berhasil disimpan.'
 	};
 }

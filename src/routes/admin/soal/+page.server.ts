@@ -1,14 +1,13 @@
 import { fail, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { prisma } from '$lib/server/prisma';
-
+import { prisma, isDatabaseConfigured } from '$lib/server/prisma';
+import { supabaseAdmin, isSupabaseConfigured } from '$lib/server/supabase';
 import { OFFICIAL_30_QUESTIONS } from '$lib/data/questions';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const section = url.searchParams.get('section') || '';
 
 	try {
-		// Get default quiz
 		const quiz = await prisma.quiz.findFirst({
 			where: { isActive: true }
 		});
@@ -22,7 +21,6 @@ export const load: PageServerLoad = async ({ url }) => {
 			orderBy: { questionNumber: 'asc' }
 		});
 
-		// Unique sections
 		const sections = await prisma.question.findMany({
 			select: { section: true },
 			distinct: ['section']
@@ -55,89 +53,113 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 export const actions: Actions = {
-	// Create Question
 	create: async ({ request }) => {
 		const formData = await request.formData();
 		const quizId = formData.get('quizId') as string;
 		const questionNumber = parseInt(formData.get('questionNumber') as string, 10);
 		const section = (formData.get('section') as string)?.trim();
 		const questionText = (formData.get('questionText') as string)?.trim();
-		const optionA = (formData.get('optionA') as string)?.trim();
-		const optionB = (formData.get('optionB') as string)?.trim();
-		const optionC = (formData.get('optionC') as string)?.trim();
-		const optionD = (formData.get('optionD') as string)?.trim();
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim().toUpperCase();
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim();
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
+		const optionA = (formData.get('optionA') as string)?.trim() || '';
+		const optionB = (formData.get('optionB') as string)?.trim() || '';
+		const optionC = (formData.get('optionC') as string)?.trim() || '';
+		const optionD = (formData.get('optionD') as string)?.trim() || '';
 
-		if (!quizId || isNaN(questionNumber) || !section || !questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
-			return fail(400, { error: 'Semua kolom pertanyaan dan pilihan A-D wajib diisi.' });
+		if (!quizId || isNaN(questionNumber) || !section || !questionText || !correctAnswer) {
+			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, dan pedoman jawaban essai wajib diisi.' });
 		}
 
 		try {
-			await prisma.question.create({
-				data: {
-					quizId,
-					questionNumber,
-					section,
-					questionText,
-					optionA,
-					optionB,
-					optionC,
-					optionD,
-					correctAnswer,
-					explanation
-				}
-			});
+			if (isDatabaseConfigured) {
+				await prisma.question.create({
+					data: {
+						quizId,
+						questionNumber,
+						section,
+						questionText,
+						optionA,
+						optionB,
+						optionC,
+						optionD,
+						correctAnswer,
+						explanation
+					}
+				});
+			}
 
-			return { success: true, message: 'Soal berhasil ditambahkan.' };
+			return { success: true, message: 'Soal essai berhasil ditambahkan.' };
 		} catch (err: any) {
 			console.error('Error creating question:', err);
 			return fail(500, { error: err?.message || 'Gagal menambahkan soal.' });
 		}
 	},
 
-	// Update Question
 	update: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 		const questionNumber = parseInt(formData.get('questionNumber') as string, 10);
 		const section = (formData.get('section') as string)?.trim();
 		const questionText = (formData.get('questionText') as string)?.trim();
-		const optionA = (formData.get('optionA') as string)?.trim();
-		const optionB = (formData.get('optionB') as string)?.trim();
-		const optionC = (formData.get('optionC') as string)?.trim();
-		const optionD = (formData.get('optionD') as string)?.trim();
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim().toUpperCase();
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim();
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
+		const optionA = (formData.get('optionA') as string)?.trim() || '';
+		const optionB = (formData.get('optionB') as string)?.trim() || '';
+		const optionC = (formData.get('optionC') as string)?.trim() || '';
+		const optionD = (formData.get('optionD') as string)?.trim() || '';
 
-		if (!id || isNaN(questionNumber) || !section || !questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
-			return fail(400, { error: 'Semua kolom pertanyaan dan pilihan A-D wajib diisi.' });
+		if (!id || isNaN(questionNumber) || !section || !questionText || !correctAnswer) {
+			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, dan pedoman jawaban essai wajib diisi.' });
+		}
+
+		// Update in-memory
+		const target = OFFICIAL_30_QUESTIONS.find((q) => q.id === id || String(q.questionNumber) === id);
+		if (target) {
+			target.questionNumber = questionNumber;
+			target.section = section;
+			target.questionText = questionText;
+			target.correctAnswer = correctAnswer;
+			target.explanation = explanation || undefined;
 		}
 
 		try {
-			await prisma.question.update({
-				where: { id },
-				data: {
-					questionNumber,
-					section,
-					questionText,
-					optionA,
-					optionB,
-					optionC,
-					optionD,
-					correctAnswer,
-					explanation
-				}
-			});
+			if (isDatabaseConfigured && id.includes('-')) {
+				await prisma.question.update({
+					where: { id },
+					data: {
+						questionNumber,
+						section,
+						questionText,
+						optionA,
+						optionB,
+						optionC,
+						optionD,
+						correctAnswer,
+						explanation
+					}
+				});
+			}
 
-			return { success: true, message: 'Soal berhasil diperbarui.' };
+			if (isSupabaseConfigured && id.includes('-')) {
+				await supabaseAdmin
+					.from('questions')
+					.update({
+						question_number: questionNumber,
+						section,
+						question_text: questionText,
+						correct_answer: correctAnswer,
+						explanation
+					})
+					.eq('id', id);
+			}
+
+			return { success: true, message: 'Soal essai berhasil diperbarui.' };
 		} catch (err: any) {
 			console.error('Error updating question:', err);
 			return fail(500, { error: err?.message || 'Gagal memperbarui soal.' });
 		}
 	},
 
-	// Delete Question
 	delete: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
@@ -145,9 +167,11 @@ export const actions: Actions = {
 		if (!id) return fail(400, { error: 'ID Soal tidak valid.' });
 
 		try {
-			await prisma.question.delete({
-				where: { id }
-			});
+			if (isDatabaseConfigured && id.includes('-')) {
+				await prisma.question.delete({
+					where: { id }
+				});
+			}
 
 			return { success: true, message: 'Soal berhasil dihapus.' };
 		} catch (err: any) {

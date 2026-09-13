@@ -3,11 +3,11 @@ export interface QuestionItem {
 	questionNumber: number;
 	section: string;
 	questionText: string;
-	optionA: string;
-	optionB: string;
-	optionC: string;
-	optionD: string;
-	correctAnswer: 'A' | 'B' | 'C' | 'D';
+	optionA?: string;
+	optionB?: string;
+	optionC?: string;
+	optionD?: string;
+	correctAnswer: string;
 	explanation?: string;
 }
 
@@ -22,7 +22,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Membuat anggota mengikuti semua keputusan senior',
 		optionC: 'Menjaga hubungan antarwarga organisasi agar berjalan harmonis',
 		optionD: 'Membuat organisasi terlihat lebih formal',
-		correctAnswer: 'C',
+		correctAnswer: 'Etika dalam organisasi diperlukan untuk menjaga hubungan antarwarga organisasi agar berjalan harmonis, saling menghormati, dan menjaga keteraturan antaranggota.',
 		explanation: 'Etika organisasi berfungsi memelihara keharmonisan, saling menghormati, dan keteraturan antar anggota.'
 	},
 	{
@@ -34,7 +34,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mendengarkan lawan bicara hingga selesai sebelum memberikan tanggapan',
 		optionC: 'Mengabaikan pendapat yang berbeda',
 		optionD: 'Menyampaikan pendapat dengan nada tinggi agar didengar',
-		correctAnswer: 'B',
+		correctAnswer: 'Mendengarkan lawan bicara hingga selesai secara utuh sebelum memberikan tanggapan atau respons secara santun dan rasional.',
 		explanation: 'Etika komunikasi mengutamakan menyimak pembicaraan secara utuh sebelum merespons secara santun.'
 	},
 	{
@@ -46,7 +46,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Hadir tepat waktu dan menyelesaikan tugas sesuai batas waktu',
 		optionC: 'Mengutamakan kepentingan pribadi',
 		optionD: 'Menghindari tugas yang dianggap sulit',
-		correctAnswer: 'B',
+		correctAnswer: 'Hadir tepat waktu dalam setiap agenda serta menuntaskan tugas dan tanggung jawab sesuai batas waktu (deadline) yang telah disepakati.',
 		explanation: 'Kedisiplinan diwujudkan dalam komitmen waktu dan penuntasan tanggung jawab sesuai tenggat.'
 	},
 	{
@@ -58,7 +58,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mampu memengaruhi anggota lain',
 		optionC: 'Memiliki kesesuaian antara perkataan dan perbuatannya',
 		optionD: 'Selalu mendapatkan jabatan dalam organisasi',
-		correctAnswer: 'C',
+		correctAnswer: 'Kader yang memiliki keselarasan, kejujuran, dan konsistensi antara apa yang diucapkan dengan apa yang dilakukan dalam kehidupan organisasi.',
 		explanation: 'Integritas merupakan keselarasan dan kejujuran antara apa yang diucapkan dengan apa yang dilakukan.'
 	},
 	{
@@ -70,7 +70,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menghindari tugas ketika mengalami kesulitan',
 		optionC: 'Menyelesaikan amanah dan memberikan pertanggungjawaban',
 		optionD: 'Menyembunyikan kesalahan agar tidak mendapat teguran',
-		correctAnswer: 'C',
+		correctAnswer: 'Menyelesaikan setiap amanah tugas yang diberikan secara tuntas serta memberikan laporan pertanggungjawaban dengan jujur dan terbuka.',
 		explanation: 'Tanggung jawab tercermin dari penyelesaian amanah serta transparansi pertanggungjawaban.'
 	},
 	{
@@ -82,7 +82,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Persaingan antaranggota',
 		optionC: 'Kebersamaan, musyawarah, dan kepentingan bersama',
 		optionD: 'Keputusan dari anggota yang paling senior',
-		correctAnswer: 'C',
+		correctAnswer: 'Mengedepankan semangat kebersamaan, musyawarah mufakat, serta mengutamakan kepentingan organisasi di atas kepentingan pribadi.',
 		explanation: 'Prinsip kolektif kolegial berlandaskan semangat kebersamaan dan musyawarah mufakat.'
 	},
 	{
@@ -94,7 +94,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Responsif',
 		optionC: 'Konsistensi',
 		optionD: 'Idealisme',
-		correctAnswer: 'B',
+		correctAnswer: 'Sikap responsif, yaitu tanggap, proaktif, dan cepat menanggapi komunikasi serta kebutuhan koordinasi organisasi.',
 		explanation: 'Sikap responsif adalah tanggap dan cepat merespons kebutuhan serta komunikasi organisasi.'
 	},
 	{
@@ -106,7 +106,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Senioritas',
 		optionC: 'Individualisme',
 		optionD: 'Kontrol sosial',
-		correctAnswer: 'A',
+		correctAnswer: 'Inisiatif, yaitu kepekaan dan kesadaran untuk melakukan tindakan positif yang bermanfaat bagi organisasi tanpa harus menunggu perintah.',
 		explanation: 'Inisiatif adalah proaktif melakukan tindakan positif tanpa harus menunggu instruksi.'
 	},
 
@@ -120,7 +120,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Berani menilai dan menyampaikan sesuatu berdasarkan fakta',
 		optionC: 'Tidak mau mengikuti aturan',
 		optionD: 'Selalu menyampaikan kritik secara terbuka tanpa mempertimbangkan etika',
-		correctAnswer: 'B',
+		correctAnswer: 'Berani menganalisis, menilai, dan menyampaikan pandangan atau kritik secara objektif berdasarkan fakta empiris dan kebenaran ilmiah.',
 		explanation: 'Sikap kritis mahasiswa berpijak pada analisis objektif dan kebenaran fakta empiris.'
 	},
 	{
@@ -132,7 +132,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Popularitas dan eksistensi mahasiswa',
 		optionC: 'Ilmu pengetahuan dan kepedulian terhadap nasib bangsa',
 		optionD: 'Kepentingan organisasi mahasiswa semata',
-		correctAnswer: 'C',
+		correctAnswer: 'Kesadaran intelektual, ilmu pengetahuan, serta kepedulian yang tulus terhadap nasib masyarakat dan masa depan bangsa.',
 		explanation: 'Gerakan mahasiswa bermuara pada kesadaran intelektual serta kepedulian tulus terhadap masa depan bangsa.'
 	},
 	{
@@ -144,7 +144,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengutamakan kebenaran dan keadilan',
 		optionC: 'Menghindari semua bentuk perbedaan pendapat',
 		optionD: 'Mempertahankan keadaan lama',
-		correctAnswer: 'B',
+		correctAnswer: 'Menjunjung tinggi kebenaran ilmiah, keadilan sosial, kejujuran, dan keberpihakan kepada kepentingan masyarakat luas.',
 		explanation: 'Kebenaran ilmiah dan keadilan sosial merupakan pilar abadi gerakan mahasiswa.'
 	},
 
@@ -158,7 +158,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Pendidikan, organisasi, dan kepemimpinan',
 		optionC: 'Penelitian, organisasi, dan pengabdian',
 		optionD: 'Pendidikan, politik, dan pengabdian',
-		correctAnswer: 'A',
+		correctAnswer: 'Tridharma Perguruan Tinggi terdiri atas: 1. Pendidikan dan Pengajaran, 2. Penelitian dan Pengembangan, dan 3. Pengabdian kepada Masyarakat.',
 		explanation: 'Tiga pilar Tridharma adalah Pendidikan & Pengajaran, Penelitian & Pengembangan, dan Pengabdian kepada Masyarakat.'
 	},
 	{
@@ -170,7 +170,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Hanya mengejar nilai akademik',
 		optionC: 'Menghindari kegiatan akademik',
 		optionD: 'Mengutamakan organisasi daripada pendidikan',
-		correctAnswer: 'A',
+		correctAnswer: 'Belajar dengan tekun, meningkatkan kapasitas wawasan keilmuan, serta berbagi ilmu pengetahuan dan pengalaman positif kepada sesama.',
 		explanation: 'Pendidikan tercermin dari ketekunan menuntut ilmu serta berbagi wawasan dengan sesama.'
 	},
 	{
@@ -182,7 +182,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Penelitian dan pengembangan',
 		optionC: 'Pengabdian kepada masyarakat',
 		optionD: 'Pengembangan organisasi',
-		correctAnswer: 'B',
+		correctAnswer: 'Pilar Penelitian dan Pengembangan (dan terintegrasi dengan Pengabdian Masyarakat) untuk mencari solusi ilmiah atas permasalahan di lingkungan sekitar.',
 		explanation: 'Riset pemecahan masalah merupakan perwujudan pilar Penelitian dan Pengembangan.'
 	},
 	{
@@ -194,7 +194,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Karena ketiganya saling melengkapi dan membentuk mahasiswa yang utuh',
 		optionC: 'Karena mahasiswa harus mengikuti semua kegiatan kampus',
 		optionD: 'Karena pengabdian lebih penting daripada pendidikan',
-		correctAnswer: 'B',
+		correctAnswer: 'Karena ketiga unsur Tridharma saling melengkapi, terintegrasi, dan membentuk karakter mahasiswa yang utuh secara akademis, beretika, dan aplikatif bagi masyarakat.',
 		explanation: 'Ketiga pilar terintegrasi dan saling menyempurnakan kompetensi seorang sarjana.'
 	},
 
@@ -208,7 +208,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Calon pemimpin masa depan',
 		optionC: 'Pengawas masyarakat',
 		optionD: 'Penggerak kegiatan sosial',
-		correctAnswer: 'B',
+		correctAnswer: 'Mahasiswa sebagai calon pemimpin masa depan dan generasi penerus bangsa yang siap menggantikan kepemimpinan terdahulu dengan kualitas integritas yang kuat.',
 		explanation: 'Iron Stock menandakan mahasiswa sebagai penerus dan calon pemimpin bangsa di masa depan.'
 	},
 	{
@@ -220,7 +220,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Guardian of Value',
 		optionC: 'Social Control',
 		optionD: 'Agent of Change',
-		correctAnswer: 'B',
+		correctAnswer: 'Guardian of Value, yaitu peran mahasiswa sebagai penjaga, pemelihara, dan penyampai nilai-nilai luhur moralitas, kebenaran, dan etika.',
 		explanation: 'Guardian of Value berarti penjaga dan pelestari nilai-nilai luhur dan etika moral.'
 	},
 	{
@@ -232,7 +232,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengawasi agar kehidupan di kampus dan masyarakat berjalan sesuai aturan dan keadilan',
 		optionC: 'Mengatur mahasiswa lainnya',
 		optionD: 'Mengambil alih kewenangan pihak kampus',
-		correctAnswer: 'B',
+		correctAnswer: 'Berperan sebagai pengawas sosial (kontrol sosial) agar kebijakan dan kehidupan di lingkungan kampus maupun masyarakat tetap berjalan adil dan sesuai norma.',
 		explanation: 'Social Control mengawasi dinamika sosial dan kebijakan agar senantiasa berpihak pada keadilan.'
 	},
 	{
@@ -244,7 +244,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Guardian of Value',
 		optionC: 'Agent of Change',
 		optionD: 'Iron Stock',
-		correctAnswer: 'C',
+		correctAnswer: 'Agent of Change, yaitu pembawa gagasan inovatif dan motor penggerak transformasi ke arah yang lebih baik dan bermanfaat.',
 		explanation: 'Agent of Change merupakan inisiator perubahan positif dan inovasi bagi masyarakat.'
 	},
 
@@ -258,7 +258,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menjadi wadah pengembangan potensi, kepemimpinan, kerja sama, dan pembelajaran organisasi',
 		optionC: 'Menggantikan kegiatan akademik mahasiswa',
 		optionD: 'Menjadi tempat mencari popularitas',
-		correctAnswer: 'B',
+		correctAnswer: 'Menjadi wadah pengembangan potensi minat bakat, melatih kepemimpinan, kerja sama tim, integritas, dan sarana pembelajaran nyata mahasiswa di luar perkuliahan.',
 		explanation: 'HIMA FST adalah kawah candradimuka pembelajaran kepemimpinan dan pengembangan potensi mahasiswa.'
 	},
 
@@ -272,7 +272,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menunggu giliran berbicara dan menyampaikan ketidaksetujuan dengan bahasa yang santun',
 		optionC: 'Membalas dengan perkataan yang lebih keras',
 		optionD: 'Meminta pimpinan forum menghentikan peserta tersebut',
-		correctAnswer: 'B',
+		correctAnswer: 'Menunggu giliran berbicara secara tertib, mendengarkan argumen hingga selesai, lalu menyampaikan perbedaan pandangan secara santun, rasional, dan berbasis argumentasi.',
 		explanation: 'Etika forum menuntut kesantunan, menghargai giliran bicara, dan argumentasi rasional.'
 	},
 	{
@@ -284,7 +284,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menyalahkan anggota lain',
 		optionC: 'Mengomunikasikan kendala dan perkembangan pekerjaan kepada pihak terkait serta mencari solusi',
 		optionD: 'Menunggu sampai ditanya oleh ketua',
-		correctAnswer: 'C',
+		correctAnswer: 'Segera mengomunikasikan kendala dan progres pekerjaan secara proaktif kepada ketua tim sebelum deadline, serta berkoordinasi untuk mencari solusi bersama.',
 		explanation: 'Komunikasi proaktif sebelum tenggat waktu adalah kunci manajemen kepanitiaan profesional.'
 	},
 	{
@@ -296,7 +296,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Membicarakan kesalahannya kepada anggota lain',
 		optionC: 'Mengingatkan dan mengajak memperbaiki laporan tersebut secara jujur',
 		optionD: 'Mengubah laporan diam-diam tanpa memberitahunya',
-		correctAnswer: 'C',
+		correctAnswer: 'Mengingatkan teman tersebut secara baik-baik dan pribadi, serta mengajaknya untuk bersama-sama merevisi dan memperbaiki kesalahan laporan tersebut secara jujur.',
 		explanation: 'Kader yang baik saling mengingatkan dan memperbaiki kesalahan secara konstruktif dan jujur.'
 	},
 	{
@@ -308,7 +308,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengikuti semua keinginannya',
 		optionC: 'Mengajak berdiskusi dan mencari keputusan melalui musyawarah dengan mengutamakan kepentingan bersama',
 		optionD: 'Membentuk kelompok baru tanpa memberitahunya',
-		correctAnswer: 'C',
+		correctAnswer: 'Mengajak berdiskusi secara terbuka dan kekeluargaan, mencari titik temu melalui musyawarah, serta mengedepankan kepentingan bersama organisasi di atas ego pribadi.',
 		explanation: 'Musyawarah mufakat mengesampingkan ego pribadi demi tujuan bersama.'
 	},
 	{
@@ -320,7 +320,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Membantu karena menunjukkan inisiatif dan kepedulian terhadap sesama anggota',
 		optionC: 'Membiarkannya agar belajar sendiri',
 		optionD: 'Melaporkannya kepada ketua karena dianggap tidak mampu',
-		correctAnswer: 'B',
+		correctAnswer: 'Mengambil inisiatif untuk mendekati, mendampingi, dan membantunya memahami alur kerja organisasi sebagai wujud kepedulian dan solidaritas sesama kader.',
 		explanation: 'Inisiatif membantu rekan kader memperkuat soliditas dan iklim kerja organisasi.'
 	},
 	{
@@ -332,7 +332,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengajak mahasiswa lain melakukan tindakan tanpa mencari fakta',
 		optionC: 'Mengumpulkan fakta, menyampaikan kritik secara kritis tetapi tetap santun, dan mengupayakan solusi',
 		optionD: 'Membiarkannya karena mahasiswa tidak boleh mencampuri urusan kampus',
-		correctAnswer: 'C',
+		correctAnswer: 'Mengumpulkan data dan fakta yang valid, menyusun kajian ilmiah secara objektif, lalu menyampaikan kritik secara santun dan konstruktif disertai rekomendasi solusi konkret.',
 		explanation: 'Kritik mahasiswa berbasis data valid, disampaikan dengan etika, dan menawarkan solusi nyata.'
 	},
 	{
@@ -344,7 +344,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Penelitian dan pengembangan dengan pengabdian kepada masyarakat',
 		optionC: 'Organisasi dengan kepemimpinan',
 		optionD: 'Iron Stock dengan Guardian of Value',
-		correctAnswer: 'B',
+		correctAnswer: 'Keterpaduan antara pilar Penelitian dan Pengembangan dengan Pengabdian kepada Masyarakat dalam menerapkan keilmuan untuk kemaslahatan masyarakat luas.',
 		explanation: 'Menggunakan hasil riset ilmiah untuk menyelesaikan problem publik mengintegrasikan pilar ke-2 dan ke-3 Tridharma.'
 	},
 	{
@@ -356,7 +356,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Kolektif kolegial dan etika forum',
 		optionC: 'Kurangnya sikap kritis',
 		optionD: 'Ketergantungan kepada senior',
-		correctAnswer: 'B',
+		correctAnswer: 'Kolektif kolegial dan etika forum yang menjunjung tinggi komitmen musyawarah mufakat serta kedewasaan dalam berorganisasi.',
 		explanation: 'Menghormati keputusan konsensus forum adalah ciri kedewasaan berorganisasi.'
 	},
 	{
@@ -368,7 +368,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Organisasi hanya boleh diikuti mahasiswa tertentu',
 		optionC: 'Organisasi merupakan ruang pembelajaran untuk mengembangkan kemampuan, tanggung jawab, kerja sama, dan kontribusi',
 		optionD: 'Semua mahasiswa wajib memiliki jabatan organisasi',
-		correctAnswer: 'C',
+		correctAnswer: 'Organisasi bukan sekadar mengejar sertifikat, melainkan wadah pembelajaran jangka panjang untuk melatih tanggung jawab, kerja sama, integritas, dan kontribusi nyata.',
 		explanation: 'Organisasi kemahasiswaan berorientasi pada proses kontribusi, tanggung jawab, dan pembelajaran bersama.'
 	},
 	{
@@ -380,7 +380,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menunggu selalu diberikan tugas',
 		optionC: 'Berkontribusi sesuai kemampuan, menjaga etika, bertanggung jawab, bekerja sama, serta ikut mengembangkan organisasi dan memberikan manfaat',
 		optionD: 'Berusaha mendapatkan jabatan agar lebih dikenal',
-		correctAnswer: 'C',
+		correctAnswer: 'Berkontribusi aktif sesuai minat dan keahlian, menjaga etika moral, bertanggung jawab penuh atas amanah, menjalin soliditas tim, dan memajukan HIMA FST UT Bandung.',
 		explanation: 'Wujud nyata kelulusan kaderisasi adalah dedikasi, integritas, dan kontribusi aktif bagi HIMA FST UT Bandung.'
 	}
 ];

@@ -6,6 +6,7 @@ import {
 	type ParticipantAttempt
 } from './participantStore';
 import { OFFICIAL_30_QUESTIONS } from '$lib/data/questions';
+export { OFFICIAL_30_QUESTIONS };
 
 export interface StudentProfile {
 	id: string;
@@ -887,8 +888,67 @@ export async function saveAnswer(data: {
 	return { success: true };
 }
 
+const ESSAY_KEYWORDS: Record<number, string[]> = {
+	1: ['harmonis', 'hubungan', 'menghormati', 'keteraturan', 'antarwarga', 'tertib', 'etika', 'anggota'],
+	2: ['mendengarkan', 'menyimak', 'selesai', 'santun', 'tanggapan', 'respons', 'bicara'],
+	3: ['tepat waktu', 'disiplin', 'tenggat', 'deadline', 'tuntas', 'tanggung jawab'],
+	4: ['integritas', 'keselarasan', 'kejujuran', 'perkataan', 'perbuatan', 'konsistensi', 'jujur'],
+	5: ['amanah', 'tanggung jawab', 'pertanggungjawaban', 'transparan', 'jujur', 'tuntas', 'laporan'],
+	6: ['kolektif', 'kolegial', 'musyawarah', 'kebersamaan', 'mufakat', 'bersama'],
+	7: ['responsif', 'tanggap', 'cepat', 'merespons', 'koordinasi', 'kepekaan', 'komunikasi'],
+	8: ['inisiatif', 'proaktif', 'tanpa menunggu', 'tanpa diperintah', 'bermanfaat', 'positif'],
+	9: ['kritis', 'fakta', 'objektif', 'analisis', 'kebenaran', 'ilmiah', 'berani'],
+	10: ['kesadaran', 'intelektual', 'ilmu', 'peduli', 'bangsa', 'rakyat', 'masyarakat'],
+	11: ['kebenaran', 'keadilan', 'sosial', 'moralitas', 'kejujuran', 'masyarakat'],
+	12: ['pendidikan', 'pengajaran', 'penelitian', 'pengembangan', 'pengabdian', 'masyarakat', 'tridharma'],
+	13: ['belajar', 'tekun', 'ilmu', 'berbagi', 'pengetahuan', 'wawasan'],
+	14: ['penelitian', 'pengembangan', 'solusi', 'masalah', 'riset', 'ilmiah', 'masyarakat'],
+	15: ['seimbang', 'melengkapi', 'utuh', 'terintegrasi', 'sarjana', 'kompetensi', 'karakter'],
+	16: ['iron stock', 'pemimpin', 'masa depan', 'penerus', 'kader', 'generasi'],
+	17: ['guardian of value', 'penjaga', 'nilai', 'moral', 'moralitas', 'kebenaran', 'etika', 'luhur'],
+	18: ['social control', 'kontrol sosial', 'pengawas', 'mengawasi', 'kebijakan', 'keadilan'],
+	19: ['agent of change', 'agen perubahan', 'inovasi', 'gagasan', 'perubahan', 'transformasi'],
+	20: ['wadah', 'potensi', 'kepemimpinan', 'leadership', 'kerja sama', 'teamwork', 'belajar', 'organisasi'],
+	21: ['giliran', 'santun', 'etika', 'forum', 'mendengarkan', 'argumen', 'rasional'],
+	22: ['komunikasi', 'proaktif', 'deadline', 'koordinasi', 'solusi', 'kendala', 'waktu'],
+	23: ['mengingatkan', 'jujur', 'memperbaiki', 'revisi', 'laporan', 'konstruktif'],
+	24: ['musyawarah', 'mufakat', 'diskusi', 'dialog', 'bersama', 'terbuka', 'kepentingan'],
+	25: ['inisiatif', 'membantu', 'mendampingi', 'peduli', 'solidaritas', 'kader'],
+	26: ['data', 'fakta', 'kajian', 'santun', 'solusi', 'dialog', 'kritik'],
+	27: ['penelitian', 'pengabdian', 'masyarakat', 'terpadu', 'solusi', 'ilmiah'],
+	28: ['musyawarah', 'mufakat', 'menerima', 'menghormati', 'kolektif', 'komitmen'],
+	29: ['pembelajaran', 'tanggung jawab', 'sertifikat', 'kontribusi', 'proses', 'belajar'],
+	30: ['kontribusi', 'etika', 'tanggung jawab', 'kerja sama', 'hima fst', 'kemajuan', 'nyata']
+};
+
+export function evaluateEssayItem(questionNumber: number, studentText: string | null): { isCorrect: boolean; points: number } {
+	if (!studentText || typeof studentText !== 'string' || studentText.trim().length < 4) {
+		return { isCorrect: false, points: 0 };
+	}
+
+	const normalized = studentText.toLowerCase().trim();
+	const keywords = ESSAY_KEYWORDS[questionNumber] || [];
+	const weight = 100 / 30; // ~3.333
+
+	let matchCount = 0;
+	for (const kw of keywords) {
+		if (normalized.includes(kw.toLowerCase())) {
+			matchCount++;
+		}
+	}
+
+	if (matchCount >= 1 || normalized.length >= 20) {
+		const points = matchCount >= 2 ? weight : weight * 0.9;
+		return { isCorrect: true, points: Math.min(weight, points) };
+	} else if (normalized.length >= 8) {
+		return { isCorrect: true, points: weight * 0.7 };
+	}
+
+	return { isCorrect: false, points: weight * 0.35 };
+}
+
 /**
- * 8. SUBMIT QUIZ ATTEMPT (ESSAI)
+ * 8. SUBMIT QUIZ ATTEMPT (ESSAI OTOMATIS DINILAI)
  */
 export async function submitQuizAttempt(data: {
 	attemptId?: string;
@@ -906,10 +966,19 @@ export async function submitQuizAttempt(data: {
 	const now = new Date();
 
 	let answeredCount = 0;
+	let correctCount = 0;
+	let totalRawPoints = 0;
+
 	const answersBreakdown = OFFICIAL_30_QUESTIONS.map((q) => {
 		const rawAns = data.answers[q.id] ?? data.answers[q.questionNumber.toString()] ?? data.answers[`num_${q.questionNumber}`] ?? null;
 		const studentChoice = typeof rawAns === 'string' && rawAns.trim() !== '' ? rawAns.trim() : null;
-		if (studentChoice !== null) answeredCount++;
+		
+		const evaluation = evaluateEssayItem(q.questionNumber, studentChoice);
+		if (studentChoice !== null) {
+			answeredCount++;
+			totalRawPoints += evaluation.points;
+			if (evaluation.isCorrect) correctCount++;
+		}
 
 		return {
 			questionId: q.id,
@@ -922,16 +991,15 @@ export async function submitQuizAttempt(data: {
 			optionD: q.optionD,
 			studentAnswer: studentChoice,
 			correctAnswer: q.correctAnswer,
-			isCorrect: null as boolean | null,
+			isCorrect: evaluation.isCorrect,
 			explanation: q.explanation
 		};
 	});
 
 	const totalQuestions = OFFICIAL_30_QUESTIONS.length;
-	// Initial score: null or pending until graded by Admin
-	const score: number | null = null;
-	const correctCount = 0;
-	const wrongCount = 0;
+	const wrongCount = totalQuestions - correctCount;
+	const computedScore = Math.min(100, Math.round(totalRawPoints * 10) / 10);
+	const score: number = computedScore;
 
 	let attemptId = data.attemptId || 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
 	let studentId = 'std-' + cleanNim;
@@ -1019,7 +1087,9 @@ export async function submitQuizAttempt(data: {
 					data: {
 						status: 'completed',
 						submittedAt: now,
-						score: targetAttempt.score ?? null,
+						score,
+						correctCount,
+						wrongCount,
 						totalQuestions
 					}
 				});
@@ -1058,6 +1128,9 @@ export async function submitQuizAttempt(data: {
 						student_id: studentId,
 						status: 'completed',
 						submitted_at: now.toISOString(),
+						score,
+						correct_count: correctCount,
+						wrong_count: wrongCount,
 						total_questions: totalQuestions
 					},
 					{ onConflict: 'id' }
@@ -1076,6 +1149,7 @@ export async function submitQuizAttempt(data: {
 								attempt_id: attemptId,
 								question_id: item.questionId,
 								selected_answer: item.studentAnswer,
+								is_correct: item.isCorrect,
 								answered_at: now.toISOString()
 							},
 							{ onConflict: 'attempt_id,question_id' }
@@ -1093,9 +1167,9 @@ export async function submitQuizAttempt(data: {
 		quizId,
 		studentId,
 		status: 'completed',
-		score: null,
-		correctCount: answeredCount,
-		wrongCount: totalQuestions - answeredCount,
+		score,
+		correctCount,
+		wrongCount,
 		totalQuestions,
 		startedAt: now,
 		submittedAt: now,
@@ -1124,10 +1198,10 @@ export async function submitQuizAttempt(data: {
 		studentName: cleanName,
 		nim: cleanNim,
 		programStudi: cleanProdi,
-		score: null,
+		score,
 		answeredCount,
-		correctCount: answeredCount,
-		wrongCount: totalQuestions - answeredCount,
+		correctCount,
+		wrongCount,
 		totalQuestions,
 		submittedAt: now.toISOString(),
 		answersBreakdown

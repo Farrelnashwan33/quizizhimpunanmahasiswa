@@ -29,7 +29,6 @@
 		Award,
 		Printer,
 		Sparkles,
-		RotateCcw,
 		ShieldAlert,
 		AlertTriangle,
 		PenLine,
@@ -301,19 +300,6 @@
 		} finally {
 			isSubmitting = false;
 		}
-	}
-
-	function resetAndRetake() {
-		answers = {};
-		quizResult = null;
-		currentIndex = 0;
-		attemptId = '';
-		showDetailedReview = false;
-		try {
-			localStorage.removeItem('quiz_fst_answers');
-			localStorage.removeItem('quiz_fst_attempt_id');
-		} catch (e) {}
-		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 </script>
 
@@ -635,29 +621,32 @@
 			</div>
 		</main>
 
-	<!-- STATE 3: SUBMISSION COMPLETED -->
+	<!-- STATE 3: SUBMISSION COMPLETED WITH AUTOMATIC SCORE -->
 	{:else}
+		{@const finalScore = quizResult.score ?? 0}
+		{@const isPassed = finalScore >= 65}
+
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 			<!-- Header Buttons -->
 			<div class="mb-6 flex items-center justify-between">
-				<Button variant="outline" size="sm" onclick={resetAndRetake}>
-					<RotateCcw class="w-4 h-4 mr-1.5" />
-					<span>Kerjakan Ulang</span>
+				<Button href="/" variant="outline" size="sm">
+					<ArrowLeft class="w-4 h-4 mr-1.5" />
+					<span>Kembali ke Beranda</span>
 				</Button>
 
 				<Button variant="outline" size="sm" onclick={() => window.print()}>
 					<Printer class="w-4 h-4 mr-1.5" />
-					<span>Cetak Bukti Pengerjaan</span>
+					<span>Cetak Hasil Quiz</span>
 				</Button>
 			</div>
 
 			<!-- Result Card -->
 			<Card class="overflow-hidden border-slate-200 shadow-xl mb-8">
-				<div class="p-6 sm:p-8 bg-linear-to-r from-emerald-700 to-teal-800 text-white">
+				<div class="p-6 sm:p-8 {isPassed ? 'bg-linear-to-r from-emerald-700 to-teal-800' : 'bg-linear-to-r from-slate-800 to-slate-900'} text-white">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 						<div>
 							<div class="flex items-center gap-2 mb-2">
-								<Badge variant="emerald" size="sm">Laporan Submisi Quiz Essai</Badge>
+								<Badge variant="emerald" size="sm">Laporan Hasil Evaluasi Quiz</Badge>
 								<span class="text-xs text-emerald-100 font-semibold">Kaderisasi Tingkat I</span>
 							</div>
 							<h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">{quizResult.studentName}</h1>
@@ -667,9 +656,14 @@
 						</div>
 
 						<div class="shrink-0">
-							<div class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/20 text-white text-xs font-bold backdrop-blur-md">
-								<CheckCircle2 class="w-4 h-4 text-emerald-300" />
-								<span>JAWABAN BERHASIL DISERAHKAN</span>
+							<div class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full {isPassed ? 'bg-white/20 text-white' : 'bg-amber-400/20 text-amber-200'} text-xs font-bold backdrop-blur-md">
+								{#if isPassed}
+									<CheckCircle2 class="w-4 h-4 text-emerald-300" />
+									<span>LULUS KADERISASI TINGKAT I</span>
+								{:else}
+									<Clock class="w-4 h-4 text-amber-300" />
+									<span>PERLU PEMBINAAN LANJUTAN</span>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -677,39 +671,34 @@
 
 				<div class="p-6 sm:p-8 bg-white space-y-6">
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+						<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
+							<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nilai Akhir</p>
+							<div class="my-2">
+								<span class="text-5xl font-black {isPassed ? 'text-emerald-600' : 'text-slate-800'} tracking-tight">{finalScore}</span>
+								<span class="text-slate-400 font-bold text-sm">/100</span>
+							</div>
+							<Badge variant={isPassed ? 'emerald' : 'amber'} size="sm" class="self-center">
+								{isPassed ? 'Memenuhi Standar KKM' : 'Belum Memenuhi KKM'}
+							</Badge>
+						</div>
+
 						<div class="p-6 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 flex flex-col justify-center">
 							<div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
 								<CheckCircle2 class="w-5 h-5" />
 							</div>
-							<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Soal Terjawab</p>
-							<p class="text-3xl font-extrabold text-emerald-700 mt-1">{quizResult.answeredCount || quizResult.correctCount}</p>
-							<p class="text-[11px] text-emerald-600 mt-0.5">dari {quizResult.totalQuestions} butir essai</p>
+							<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Jawaban Sesuai</p>
+							<p class="text-3xl font-extrabold text-emerald-700 mt-1">{quizResult.correctCount}</p>
+							<p class="text-[11px] text-emerald-600 mt-0.5">dari {quizResult.totalQuestions} butir soal</p>
 						</div>
 
-						<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
-							<div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center mx-auto mb-2">
-								<Clock class="w-5 h-5" />
+						<div class="p-6 bg-rose-50/60 rounded-2xl border border-rose-200/80 flex flex-col justify-center">
+							<div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto mb-2">
+								<XCircle class="w-5 h-5" />
 							</div>
-							<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Evaluasi</p>
-							<p class="text-sm font-bold text-slate-800 mt-1">Menunggu Penilaian</p>
-							<p class="text-[11px] text-slate-500 mt-0.5">Oleh Admin Pengurus</p>
+							<p class="text-xs font-bold text-rose-800 uppercase tracking-wider">Perlu Evaluasi</p>
+							<p class="text-3xl font-extrabold text-rose-700 mt-1">{quizResult.wrongCount}</p>
+							<p class="text-[11px] text-rose-600 mt-0.5">dari {quizResult.totalQuestions} butir soal</p>
 						</div>
-
-						<div class="p-6 bg-teal-50/60 rounded-2xl border border-teal-200/80 flex flex-col justify-center">
-							<div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mx-auto mb-2">
-								<FileText class="w-5 h-5" />
-							</div>
-							<p class="text-xs font-bold text-teal-800 uppercase tracking-wider">Tipe Ujian</p>
-							<p class="text-lg font-extrabold text-teal-800 mt-1">30 Soal Essai</p>
-							<p class="text-[11px] text-teal-600 mt-0.5">HIMA FST UT Bandung</p>
-						</div>
-					</div>
-
-					<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3 text-xs text-slate-600">
-						<ShieldAlert class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-						<span>
-							Jawaban Anda telah tercatat dengan aman di database. Tim Pengurus HIMA FST UT Bandung akan memeriksa jawaban essai Anda berdasarkan pedoman penilaian resmi.
-						</span>
 					</div>
 
 					<div class="pt-2 text-center">
@@ -719,7 +708,7 @@
 							onclick={() => showDetailedReview = !showDetailedReview}
 						>
 							<FileText class="w-4 h-4 mr-2" />
-							<span>{showDetailedReview ? 'Sembunyikan Lembar Jawaban' : 'Lihat Ringkasan Jawaban Essai yang Dikirim (1–30)'}</span>
+							<span>{showDetailedReview ? 'Sembunyikan Lembar Jawaban' : 'Lihat Hasil Evaluasi & Pembahasan Lengkap (1–30)'}</span>
 						</Button>
 					</div>
 				</div>
@@ -731,30 +720,35 @@
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 							<FileText class="w-5 h-5 text-emerald-600" />
-							<span>Lembar Jawaban Essai Nomor 1–30</span>
+							<span>Lembar Evaluasi Soal Nomor 1–30</span>
 						</h2>
-						<span class="text-xs text-slate-500">Tersimpan di Database</span>
+						<span class="text-xs text-slate-500">Hasil Evaluasi Otomatis & Pembahasan</span>
 					</div>
 
 					{#each quizResult.answersBreakdown as item}
-						{@const isAnswered = item.studentAnswer && item.studentAnswer.trim() !== ''}
+						{@const isAns = item.studentAnswer && item.studentAnswer.trim() !== ''}
+						{@const isCorrect = item.isCorrect}
 
-						<Card class="border border-slate-200 bg-white">
+						<Card class="border {isCorrect ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'}">
 							<div class="flex items-start justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
 								<div class="flex items-center gap-2">
-									<span class="w-7 h-7 rounded-lg {isAnswered ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'} flex items-center justify-center font-bold text-xs">
+									<span class="w-7 h-7 rounded-lg {isCorrect ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'} flex items-center justify-center font-bold text-xs">
 										{item.questionNumber}
 									</span>
-									<Badge variant="emerald" size="sm">
+									<Badge variant={isCorrect ? 'emerald' : 'rose'} size="sm">
 										{item.section}
 									</Badge>
 								</div>
 
-								<div class="flex items-center gap-1.5 text-xs font-bold {isAnswered ? 'text-emerald-700' : 'text-slate-400'}">
-									{#if isAnswered}
+								<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
+									{#if isCorrect}
 										<Check class="w-4 h-4 stroke-[3]" />
-										<span>DIJAWAB</span>
+										<span>SESUAI DENGAN MATERI</span>
+									{:else if isAns}
+										<X class="w-4 h-4 stroke-[3]" />
+										<span>PERLU EVALUASI</span>
 									{:else}
+										<X class="w-4 h-4 stroke-[3]" />
 										<span>TIDAK DIJAWAB</span>
 									{/if}
 								</div>
@@ -764,19 +758,23 @@
 								{item.questionText}
 							</p>
 
-							<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 mb-3">
+							<div class="p-3.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 mb-3">
 								<p class="font-bold text-slate-600 mb-1 flex items-center gap-1.5">
 									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-									<span>Jawaban Anda:</span>
+									<span>Jawaban Essai Anda:</span>
 								</p>
-								<p class="whitespace-pre-line leading-relaxed {isAnswered ? 'text-slate-800' : 'italic text-slate-400'}">
+								<p class="whitespace-pre-line leading-relaxed {isAns ? 'text-slate-800' : 'italic text-slate-400'}">
 									{item.studentAnswer || '(Tidak ada jawaban ditulis)'}
 								</p>
 							</div>
 
+							<div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs text-emerald-950 mb-2">
+								<strong class="text-emerald-900">Pedoman Jawaban:</strong> {item.correctAnswer}
+							</div>
+
 							{#if item.explanation}
-								<div class="p-3 bg-emerald-50/40 rounded-xl border border-emerald-100 text-xs text-slate-600">
-									<strong class="text-emerald-800">Catatan/Pembahasan:</strong> {item.explanation}
+								<div class="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-600">
+									<strong class="text-emerald-800">Pembahasan:</strong> {item.explanation}
 								</div>
 							{/if}
 						</Card>

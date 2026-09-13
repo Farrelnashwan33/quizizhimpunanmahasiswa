@@ -134,7 +134,7 @@
 						</div>
 						<div class="border-x border-slate-200">
 							<p class="text-[11px] text-slate-500 font-semibold uppercase">Tipe Soal</p>
-							<p class="text-base sm:text-lg font-extrabold text-slate-900">Pilihan Ganda</p>
+							<p class="text-base sm:text-lg font-extrabold text-slate-900">Soal Essai</p>
 						</div>
 						<div>
 							<p class="text-[11px] text-slate-500 font-semibold uppercase">Batas Waktu</p>
@@ -266,11 +266,11 @@
 
 						<div class="grid grid-cols-2 gap-2 my-4 pt-4 border-t border-white/10 text-xs">
 							<div class="p-2.5 bg-white/5 rounded-xl">
-								<p class="text-emerald-200">Jawaban Benar</p>
+								<p class="text-emerald-200">Jawaban Sesuai</p>
 								<p class="text-base font-extrabold text-white">{currentAttempt.correctCount} Soal</p>
 							</div>
 							<div class="p-2.5 bg-white/5 rounded-xl">
-								<p class="text-emerald-200">Jawaban Salah</p>
+								<p class="text-emerald-200">Perlu Evaluasi</p>
 								<p class="text-base font-extrabold text-rose-300">{currentAttempt.wrongCount} Soal</p>
 							</div>
 						</div>
@@ -291,11 +291,11 @@
 				<ul class="space-y-3 text-xs text-slate-600">
 					<li class="flex items-start gap-2">
 						<span class="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</span>
-						<span>Quiz terdiri dari <strong>30 butir soal pilihan ganda</strong> dengan durasi 60 menit.</span>
+						<span>Quiz terdiri dari <strong>30 butir soal essai</strong> dengan durasi 60 menit.</span>
 					</li>
 					<li class="flex items-start gap-2">
 						<span class="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
-						<span>Setiap jawaban yang Anda pilih langsung <strong>tersimpan otomatis</strong> ke server Supabase.</span>
+						<span>Setiap jawaban essai yang Anda ketik langsung <strong>tersimpan otomatis</strong> ke server Supabase.</span>
 					</li>
 					<li class="flex items-start gap-2">
 						<span class="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>

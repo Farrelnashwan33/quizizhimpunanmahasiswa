@@ -109,44 +109,38 @@
 
 		<!-- Main Stats Grid -->
 		<div class="p-6 sm:p-8 bg-white space-y-6">
-			<!-- Big Score Display -->
+			<!-- Big Score Display (Auto Evaluated) -->
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
 				<!-- Score -->
 				<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
 					<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nilai Akhir</p>
 					<div class="my-2">
-						{#if isGraded}
-							<span class="text-5xl font-black {isPassed ? 'text-emerald-600' : 'text-slate-800'} tracking-tight">{score}</span>
-							<span class="text-slate-400 font-bold text-sm">/100</span>
-						{:else}
-							<span class="text-2xl font-bold text-emerald-700">Dalam Evaluasi</span>
-						{/if}
+						<span class="text-5xl font-black {isPassed ? 'text-emerald-600' : 'text-slate-800'} tracking-tight">{score ?? 0}</span>
+						<span class="text-slate-400 font-bold text-sm">/100</span>
 					</div>
-					<Badge variant={isPassed ? 'emerald' : isGraded ? 'amber' : 'emerald'} size="sm" class="self-center">
-						{isPassed ? 'Lulus KKM' : isGraded ? 'Belum Memenuhi' : 'Menunggu Koreksi'}
+					<Badge variant={isPassed ? 'emerald' : 'amber'} size="sm" class="self-center">
+						{isPassed ? 'Memenuhi Standar KKM' : 'Belum Memenuhi KKM'}
 					</Badge>
 				</div>
 
-				<!-- Soal Terjawab -->
+				<!-- Jawaban Sesuai -->
 				<div class="p-6 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 flex flex-col justify-center">
 					<div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
 						<CheckCircle2 class="w-5 h-5" />
 					</div>
-					<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Tipe Soal</p>
-					<p class="text-2xl font-extrabold text-emerald-700 mt-1">30 Soal Essai</p>
-					<p class="text-[11px] text-emerald-600 mt-0.5">Kaderisasi Tingkat I</p>
+					<p class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Jawaban Sesuai</p>
+					<p class="text-3xl font-extrabold text-emerald-700 mt-1">{attempt.correctCount ?? 0}</p>
+					<p class="text-[11px] text-emerald-600 mt-0.5">dari 30 butir soal</p>
 				</div>
 
-				<!-- Durasi -->
-				<div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
-					<div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center mx-auto mb-2">
-						<Clock class="w-5 h-5" />
+				<!-- Perlu Evaluasi -->
+				<div class="p-6 bg-rose-50/60 rounded-2xl border border-rose-200/80 flex flex-col justify-center">
+					<div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto mb-2">
+						<XCircle class="w-5 h-5" />
 					</div>
-					<p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Waktu Pengerjaan</p>
-					<p class="text-xl font-extrabold text-slate-800 mt-1">{durationText()}</p>
-					<p class="text-[11px] text-slate-500 mt-0.5">
-						Selesai: {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
-					</p>
+					<p class="text-xs font-bold text-rose-800 uppercase tracking-wider">Perlu Evaluasi</p>
+					<p class="text-3xl font-extrabold text-rose-700 mt-1">{attempt.wrongCount ?? 0}</p>
+					<p class="text-[11px] text-rose-600 mt-0.5">dari 30 butir soal</p>
 				</div>
 			</div>
 
@@ -154,12 +148,12 @@
 			{#if canReviewAnswers && answers.length > 0}
 				<div class="pt-4 border-t border-slate-100 text-center">
 					<Button
-						variant="outline"
+						variant="primary"
 						size="md"
 						onclick={() => showDetailedAnswers = !showDetailedAnswers}
 					>
-						<FileText class="w-4 h-4 mr-2 text-emerald-600" />
-						<span>{showDetailedAnswers ? 'Sembunyikan Lembar Jawaban' : 'Lihat Detail Lembar Jawaban Essai (1–30)'}</span>
+						<FileText class="w-4 h-4 mr-2" />
+						<span>{showDetailedAnswers ? 'Sembunyikan Lembar Jawaban' : 'Lihat Hasil Evaluasi & Pembahasan Lengkap (1–30)'}</span>
 					</Button>
 				</div>
 			{:else}
@@ -176,32 +170,37 @@
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
 					<FileText class="w-5 h-5 text-emerald-600" />
-					<span>Lembar Jawaban Essai (1–30)</span>
+					<span>Lembar Evaluasi Soal Nomor 1–30</span>
 				</h2>
-				<span class="text-xs text-slate-500">Tersimpan di Database</span>
+				<span class="text-xs text-slate-500">Hasil Evaluasi Otomatis & Pembahasan</span>
 			</div>
 
 			{#each answers as ans, idx}
 				{@const q = ans.question}
 				{@const studentText = ans.studentAnswer}
 				{@const isAnswered = studentText && studentText.trim() !== ''}
+				{@const isCorrect = ans.isCorrect}
 
-				<Card class="border border-slate-200 bg-white">
+				<Card class="border {isCorrect ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'}">
 					<div class="flex items-start justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
 						<div class="flex items-center gap-2">
-							<span class="w-7 h-7 rounded-lg {isAnswered ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'} flex items-center justify-center font-bold text-xs">
+							<span class="w-7 h-7 rounded-lg {isCorrect ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'} flex items-center justify-center font-bold text-xs">
 								{q?.questionNumber || idx + 1}
 							</span>
-							<Badge variant="emerald" size="sm">
+							<Badge variant={isCorrect ? 'emerald' : 'rose'} size="sm">
 								{q?.section || 'Materi'}
 							</Badge>
 						</div>
 
-						<div class="flex items-center gap-1.5 text-xs font-bold {isAnswered ? 'text-emerald-700' : 'text-slate-400'}">
-							{#if isAnswered}
+						<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
+							{#if isCorrect}
 								<Check class="w-4 h-4 stroke-[3]" />
-								<span>DIJAWAB</span>
+								<span>SESUAI DENGAN MATERI</span>
+							{:else if isAnswered}
+								<X class="w-4 h-4 stroke-[3]" />
+								<span>PERLU EVALUASI</span>
 							{:else}
+								<X class="w-4 h-4 stroke-[3]" />
 								<span>TIDAK DIJAWAB</span>
 							{/if}
 						</div>
@@ -213,7 +212,7 @@
 					</p>
 
 					<!-- Student essay response -->
-					<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 mb-3">
+					<div class="p-3.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 mb-3">
 						<p class="font-bold text-slate-600 mb-1 flex items-center gap-1.5">
 							<PenLine class="w-3.5 h-3.5 text-emerald-600" />
 							<span>Jawaban Essai Anda:</span>
@@ -225,8 +224,8 @@
 
 					<!-- Official answer key guideline & Explanation -->
 					{#if q?.correctAnswer}
-						<div class="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 text-xs text-slate-700 mb-2">
-							<strong class="text-emerald-800">Pedoman Jawaban:</strong> {q.correctAnswer}
+						<div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs text-emerald-950 mb-2">
+							<strong class="text-emerald-900">Pedoman Jawaban:</strong> {q.correctAnswer}
 						</div>
 					{/if}
 

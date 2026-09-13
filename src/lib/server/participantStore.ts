@@ -42,8 +42,7 @@ export const inMemoryAttempts: ParticipantAttempt[] = [];
 export const inMemoryViolations: LiveViolation[] = [];
 
 export function recordAttempt(attempt: ParticipantAttempt) {
-	// Remove existing attempt with same nim if re-taking, or prepend
-	const existingIndex = inMemoryAttempts.findIndex((a) => a.student.nim === attempt.student.nim);
+	const existingIndex = inMemoryAttempts.findIndex((a) => a.id === attempt.id);
 	if (existingIndex >= 0) {
 		inMemoryAttempts[existingIndex] = attempt;
 	} else {

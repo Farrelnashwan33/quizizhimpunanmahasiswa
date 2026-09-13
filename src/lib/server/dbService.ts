@@ -89,13 +89,12 @@ async function fetchAllRawDataFromDatabase(): Promise<FormattedAttempt[]> {
 			});
 
 			for (const att of prismaAttempts) {
-				const key = att.student?.nim || att.id;
-				attemptMap.set(key, {
+				attemptMap.set(att.id, {
 					id: att.id,
 					quizId: att.quizId,
 					studentId: att.studentId,
 					status: att.status,
-					score: att.score !== null ? Number(att.score) : null,
+					score: att.score !== null && att.score !== undefined ? Number(att.score) : 0,
 					correctCount: att.correctCount,
 					wrongCount: att.wrongCount,
 					totalQuestions: att.totalQuestions,
@@ -124,10 +123,12 @@ async function fetchAllRawDataFromDatabase(): Promise<FormattedAttempt[]> {
 				where: { role: 'mahasiswa' }
 			});
 
+			const existingStudentIds = new Set(prismaAttempts.map((a) => a.studentId));
 			for (const prof of prismaProfiles) {
-				if (!attemptMap.has(prof.nim)) {
-					attemptMap.set(prof.nim, {
-						id: 'att-prof-' + prof.id,
+				if (!existingStudentIds.has(prof.id)) {
+					const profAttId = 'att-prof-' + prof.id;
+					attemptMap.set(profAttId, {
+						id: profAttId,
 						quizId: '11111111-1111-1111-1111-111111111111',
 						studentId: prof.id,
 						status: 'in_progress',
@@ -249,48 +250,25 @@ async function fetchAllRawDataFromDatabase(): Promise<FormattedAttempt[]> {
 					};
 
 				const answers = answersByAttemptId.get(attId) || [];
-				const key = matchedProfile.nim !== '-' ? matchedProfile.nim : attId;
 
-				attemptMap.set(key, {
-					id: attId,
-					quizId: att.quiz_id || att.quizId || '11111111-1111-1111-1111-111111111111',
-					studentId: matchedProfile.id,
-					status: att.status || 'completed',
-					score: att.score !== null && att.score !== undefined ? Number(att.score) : null,
-					correctCount: att.correct_count ?? att.correctCount ?? 0,
-					wrongCount: att.wrong_count ?? att.wrongCount ?? 0,
-					totalQuestions: att.total_questions ?? att.totalQuestions ?? 30,
-					startedAt: att.started_at || att.startedAt || new Date(),
-					submittedAt: att.submitted_at || att.submittedAt || null,
-					student: matchedProfile,
-					quiz: {
-						id: att.quiz_id || '11111111-1111-1111-1111-111111111111',
-						title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
-					},
-					answers
-				});
-			}
-
-			// If profiles exist without attempts in supaAttempts, include them
-			for (const [nim, prof] of profileByNim.entries()) {
-				if (!attemptMap.has(nim) && prof.role === 'mahasiswa') {
-					attemptMap.set(nim, {
-						id: 'att-prof-' + prof.id,
-						quizId: '11111111-1111-1111-1111-111111111111',
-						studentId: prof.id,
-						status: 'in_progress',
-						score: null,
-						correctCount: 0,
-						wrongCount: 0,
-						totalQuestions: 30,
-						startedAt: prof.createdAt,
-						submittedAt: null,
-						student: prof,
+				if (!attemptMap.has(attId)) {
+					attemptMap.set(attId, {
+						id: attId,
+						quizId: att.quiz_id || att.quizId || '11111111-1111-1111-1111-111111111111',
+						studentId: matchedProfile.id,
+						status: att.status || 'completed',
+						score: att.score !== null && att.score !== undefined ? Number(att.score) : 0,
+						correctCount: att.correct_count ?? att.correctCount ?? 0,
+						wrongCount: att.wrong_count ?? att.wrongCount ?? 0,
+						totalQuestions: att.total_questions ?? att.totalQuestions ?? 30,
+						startedAt: att.started_at || att.startedAt || new Date(),
+						submittedAt: att.submitted_at || att.submittedAt || null,
+						student: matchedProfile,
 						quiz: {
-							id: '11111111-1111-1111-1111-111111111111',
+							id: att.quiz_id || '11111111-1111-1111-1111-111111111111',
 							title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung'
 						},
-						answers: []
+						answers
 					});
 				}
 			}
@@ -304,9 +282,8 @@ async function fetchAllRawDataFromDatabase(): Promise<FormattedAttempt[]> {
 	// ==========================================
 	const memoryAttempts = getMemoryAttempts();
 	for (const mem of memoryAttempts) {
-		const key = mem.student?.nim || mem.id;
-		if (!attemptMap.has(key)) {
-			attemptMap.set(key, mem as any);
+		if (!attemptMap.has(mem.id)) {
+			attemptMap.set(mem.id, mem as any);
 		}
 	}
 

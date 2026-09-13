@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -16,10 +16,24 @@
 		CheckCircle2,
 		Clock,
 		ArrowUpDown,
-		User
+		User,
+		RefreshCw
 	} from 'lucide-svelte';
 
 	let { data } = $props();
+	let isRefreshing = $state(false);
+
+	async function handleRefresh() {
+		isRefreshing = true;
+		try {
+			await invalidateAll();
+		} finally {
+			setTimeout(() => {
+				isRefreshing = false;
+			}, 400);
+		}
+	}
+
 	const attempts = $derived(data.attempts || []);
 	const totalCount = $derived(data.totalCount || 0);
 	const currentPage = $derived(data.page || 1);
@@ -83,7 +97,17 @@
 			</p>
 		</div>
 
-		<div class="flex items-center gap-3">
+		<div class="flex items-center gap-2.5">
+			<button
+				type="button"
+				onclick={handleRefresh}
+				disabled={isRefreshing}
+				class="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+			>
+				<RefreshCw class="w-3.5 h-3.5 mr-1.5 {isRefreshing ? 'animate-spin text-emerald-400' : 'text-slate-400'}" />
+				<span>{isRefreshing ? 'Memuat...' : 'Muat Ulang Data'}</span>
+			</button>
+
 			<a
 				href="/admin/peserta/export"
 				data-sveltekit-reload

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { prisma } from '$lib/server/prisma';
+import { getAllQuizAttempts } from '$lib/server/dbService';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	// Check admin access
@@ -11,44 +11,26 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const search = url.searchParams.get('q') || '';
 	const prodi = url.searchParams.get('prodi') || '';
 	const status = url.searchParams.get('status') || '';
+	const sort = url.searchParams.get('sort') || 'score_desc';
 
 	try {
-		const where: any = { role: 'mahasiswa' };
-		if (search) {
-			where.OR = [
-				{ fullName: { contains: search, mode: 'insensitive' } },
-				{ nim: { contains: search, mode: 'insensitive' } }
-			];
-		}
-		if (prodi) {
-			where.programStudi = prodi;
-		}
-
-		const students = await prisma.profile.findMany({
-			where,
-			include: {
-				attempts: {
-					orderBy: { startedAt: 'desc' }
-				}
-			},
-			orderBy: { createdAt: 'desc' }
+		const result = await getAllQuizAttempts({
+			search,
+			prodi,
+			status,
+			sort,
+			pageSize: 10000
 		});
-
-		let filtered = students;
-		if (status) {
-			filtered = students.filter((s) => {
-				const latest = s.attempts[0];
-				return latest?.status === status;
-			});
-		}
 
 		return json({
 			success: true,
-			total: filtered.length,
-			participants: filtered
+			total: result.totalCount,
+			participants: result.attempts,
+			prodiList: result.prodiList
 		});
 	} catch (err: any) {
 		console.error('Error fetching admin participants API:', err);
 		return json({ success: false, error: err?.message || 'Database error' }, { status: 500 });
 	}
 };
+

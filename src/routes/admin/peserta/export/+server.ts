@@ -1,33 +1,15 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { prisma } from '$lib/server/prisma';
-import { getAllAttempts } from '$lib/server/participantStore';
+import { getAllQuizAttempts } from '$lib/server/dbService';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user || locals.profile?.role !== 'admin') {
 		throw error(403, 'Unauthorized');
 	}
 
-	const memoryAttempts = getAllAttempts();
-
 	try {
-		let dbAttempts: any[] = [];
-		try {
-			dbAttempts = await prisma.quizAttempt.findMany({
-				include: {
-					student: true,
-					quiz: true
-				},
-				orderBy: { score: 'desc' }
-			});
-		} catch (dbErr) {
-			dbAttempts = [];
-		}
-
-		// Merge database and memory store attempts
-		const dbNims = new Set(dbAttempts.map((a) => a.student?.nim));
-		const extraMemory = memoryAttempts.filter((m) => !dbNims.has(m.student?.nim));
-		const combined = [...dbAttempts, ...extraMemory].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+		const result = await getAllQuizAttempts({ pageSize: 10000 });
+		const combined = result.attempts;
 
 		// Format CSV Header Columns
 		const headers = [
@@ -86,3 +68,4 @@ export const GET: RequestHandler = async ({ locals }) => {
 		throw error(500, 'Gagal membuat file export CSV');
 	}
 };
+

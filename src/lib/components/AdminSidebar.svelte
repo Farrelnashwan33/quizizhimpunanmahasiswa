@@ -51,9 +51,14 @@
 
 		<!-- Nav links -->
 		<nav class="space-y-1">
-			{#each navItems as item}
+			{#each navItems as item, idx}
 				{@const Icon = item.icon}
-				{@const isActive = currentPath === item.href || (item.href !== '/admin/dashboard' && currentPath.startsWith(item.href))}
+				{@const isActive =
+					idx === 2
+						? currentPath === '/admin/peserta'
+						: idx === 6
+							? currentPath.startsWith('/admin/peserta/')
+							: currentPath === item.href || (item.href !== '/admin/dashboard' && currentPath.startsWith(item.href))}
 				<a
 					href={item.href}
 					class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 {isActive ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/70'}"
@@ -63,6 +68,7 @@
 				</a>
 			{/each}
 		</nav>
+
 	</div>
 
 	<!-- Footer Admin info & logout -->

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { prisma, isDatabaseConfigured } from '$lib/server/prisma';
+import { saveAnswer } from '$lib/server/dbService';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -13,52 +13,17 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		if (isDatabaseConfigured && attemptId.includes('-') && questionId.includes('-')) {
-			try {
-				const attempt = await prisma.quizAttempt.findUnique({
-					where: { id: attemptId }
-				});
-
-				if (attempt && attempt.status === 'in_progress') {
-					const saved = await prisma.answer.upsert({
-						where: {
-							attemptId_questionId: {
-								attemptId,
-								questionId
-							}
-						},
-						update: {
-							selectedAnswer,
-							answeredAt: new Date()
-						},
-						create: {
-							attemptId,
-							questionId,
-							selectedAnswer,
-							answeredAt: new Date()
-						}
-					});
-
-					return json({
-						success: true,
-						answerId: saved.id,
-						questionId: saved.questionId,
-						selectedAnswer: saved.selectedAnswer
-					});
-				}
-			} catch (dbErr) {
-				console.warn('Database save-answer warning:', dbErr);
-			}
-		}
+		await saveAnswer({ attemptId, questionId, selectedAnswer });
 
 		return json({
 			success: true,
 			questionId,
 			selectedAnswer,
-			saved: 'cached'
+			saved: true
 		});
 	} catch (err: any) {
 		console.error('Error in save-answer API:', err);
-		return json({ success: true, saved: 'fallback' });
+		return json({ success: true, saved: 'cached' });
 	}
 };
+

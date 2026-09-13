@@ -3,16 +3,28 @@ import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 
 export function getDatabaseUrl(): string {
-	const url =
+	let url =
 		env.DATABASE_URL ||
 		process.env.DATABASE_URL ||
 		process.env.POSTGRES_PRISMA_URL ||
 		process.env.POSTGRES_URL ||
 		'';
-	return url.trim();
+	url = url.trim();
+
+	if (url) {
+		// If using Supabase transaction pooler on port 6543, ensure pgbouncer=true is appended
+		if (url.includes(':6543') && !url.includes('pgbouncer=true')) {
+			const separator = url.includes('?') ? '&' : '?';
+			url = `${url}${separator}pgbouncer=true&connection_limit=1`;
+		}
+	}
+
+	return url;
 }
 
-export const isDatabaseConfigured = Boolean(getDatabaseUrl() !== '');
+export const isDatabaseConfigured = Boolean(
+	getDatabaseUrl() !== '' && !getDatabaseUrl().includes('placeholder')
+);
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -30,13 +42,16 @@ export function getPrismaClient(): PrismaClient {
 						url
 					}
 				},
-				log: ['error', 'warn']
+				log: dev ? ['error', 'warn'] : ['error']
 			})
 		: new PrismaClient({
 				log: ['error']
 			});
 
-	globalForPrisma.prisma = client;
+	if (process.env.NODE_ENV !== 'production') {
+		globalForPrisma.prisma = client;
+	}
+
 	return client;
 }
 
@@ -46,3 +61,4 @@ export const prisma = new Proxy({} as PrismaClient, {
 		return (client as any)[prop];
 	}
 });
+

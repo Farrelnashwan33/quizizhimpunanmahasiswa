@@ -417,19 +417,86 @@ export async function getQuizAttemptById(idOrNim: string) {
 
 	// Build map of student answers
 	const answerMap = new Map<string, any>();
-	if (attempt.answers) {
+
+	// Add pre-loaded answers
+	if (attempt.answers && attempt.answers.length > 0) {
 		for (const a of attempt.answers) {
 			const qId = a.questionId || a.question_id;
 			const qNum = a.question?.questionNumber || a.question?.question_number || a.questionNumber;
-			if (qId) answerMap.set(qId, a);
-			if (qNum) answerMap.set(`num_${qNum}`, a);
+			if (qId) answerMap.set(String(qId), a);
+			if (qNum !== undefined && qNum !== null) answerMap.set(`num_${qNum}`, a);
+		}
+	}
+
+	// Targeted query via Prisma if answerMap is empty or small
+	if (answerMap.size < OFFICIAL_30_QUESTIONS.length && isDatabaseConfigured && attempt.id.includes('-')) {
+		try {
+			const directPrismaAnswers = await prisma.answer.findMany({
+				where: { attemptId: attempt.id },
+				include: { question: true }
+			});
+			for (const a of directPrismaAnswers) {
+				if (a.questionId) answerMap.set(String(a.questionId), a);
+				if (a.question?.questionNumber) answerMap.set(`num_${a.question.questionNumber}`, a);
+			}
+		} catch (err) {
+			console.warn('Prisma direct answers query notice:', err);
+		}
+	}
+
+	// Targeted query via Supabase REST if answerMap is still incomplete
+	if (answerMap.size < OFFICIAL_30_QUESTIONS.length && isSupabaseConfigured) {
+		try {
+			// Query by attempt_id
+			const { data: supaDirectAnswers } = await supabaseAdmin
+				.from('answers')
+				.select('*')
+				.eq('attempt_id', attempt.id);
+
+			if (supaDirectAnswers && supaDirectAnswers.length > 0) {
+				for (const a of supaDirectAnswers) {
+					const qId = a.question_id || a.questionId;
+					const qNum = a.question_number || a.questionNumber;
+					if (qId) answerMap.set(String(qId), a);
+					if (qNum !== undefined && qNum !== null) answerMap.set(`num_${qNum}`, a);
+				}
+			}
+
+			// Also try alternative table names if empty
+			if (answerMap.size === 0) {
+				const { data: altAnswers } = await supabaseAdmin
+					.from('jawaban')
+					.select('*')
+					.eq('attempt_id', attempt.id);
+				if (altAnswers && altAnswers.length > 0) {
+					for (const a of altAnswers) {
+						const qId = a.question_id || a.questionId;
+						const qNum = a.question_number || a.questionNumber || a.nomor_soal;
+						if (qId) answerMap.set(String(qId), a);
+						if (qNum !== undefined && qNum !== null) answerMap.set(`num_${qNum}`, a);
+					}
+				}
+			}
+		} catch (supaErr) {
+			console.warn('Supabase direct answers query notice:', supaErr);
 		}
 	}
 
 	// Build detailed 30 questions breakdown
 	const detailedQuestions: DetailedAnswerItem[] = OFFICIAL_30_QUESTIONS.map((q) => {
-		const ans = answerMap.get(q.id) || answerMap.get(`num_${q.questionNumber}`);
-		const studentChoice = (ans?.selectedAnswer || ans?.selected_answer || ans?.studentAnswer || null)?.toUpperCase() || null;
+		const ans =
+			answerMap.get(String(q.id)) ||
+			answerMap.get(`num_${q.questionNumber}`) ||
+			answerMap.get(String(q.questionNumber));
+
+		const studentChoice = (
+			ans?.selectedAnswer ||
+			ans?.selected_answer ||
+			ans?.jawaban ||
+			ans?.studentAnswer ||
+			null
+		)?.toUpperCase() || null;
+
 		const isCorrect = studentChoice !== null && studentChoice === q.correctAnswer?.toUpperCase();
 		const status: 'Benar' | 'Salah' | 'Belum Dijawab' = studentChoice
 			? (isCorrect ? 'Benar' : 'Salah')
@@ -1002,6 +1069,24 @@ export async function submitQuizAttempt(data: {
 				.maybeSingle();
 
 			if (supaAtt) attemptId = supaAtt.id;
+
+			// Also insert / upsert answers into Supabase answers table
+			for (const item of answersBreakdown) {
+				if (item.questionId && item.questionId.includes('-')) {
+					try {
+						await supabaseAdmin.from('answers').upsert(
+							{
+								attempt_id: attemptId,
+								question_id: item.questionId,
+								selected_answer: item.studentAnswer,
+								is_correct: item.isCorrect,
+								answered_at: now.toISOString()
+							},
+							{ onConflict: 'attempt_id,question_id' }
+						);
+					} catch (ansErr) {}
+				}
+			}
 		} catch (supaErr) {
 			console.warn('Supabase REST submit error:', supaErr);
 		}

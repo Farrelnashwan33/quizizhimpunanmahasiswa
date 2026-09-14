@@ -66,12 +66,12 @@
 			<table class="w-full text-left text-xs text-slate-300">
 				<thead class="bg-slate-850 text-slate-400 uppercase tracking-wider text-[11px] font-bold border-b border-slate-800">
 					<tr>
-						<th class="py-3.5 px-4 w-12 text-center">No</th>
-						<th class="py-3.5 px-4 w-44">Kategori</th>
-						<th class="py-3.5 px-4 min-w-[260px]">Pertanyaan Essay</th>
-						<th class="py-3.5 px-4 min-w-[320px]">Kunci Referensi Jawaban Essay</th>
-						<th class="py-3.5 px-4 min-w-[240px]">Pembahasan & Rubrik</th>
-						<th class="py-3.5 px-4 w-20 text-center">Aksi</th>
+						<th class="py-3.5 px-4 w-12 text-center">NO</th>
+						<th class="py-3.5 px-4 w-44">KATEGORI</th>
+						<th class="py-3.5 px-4 min-w-[280px]">PERTANYAAN & OPSI</th>
+						<th class="py-3.5 px-4 min-w-[320px]">KUNCI RESMI</th>
+						<th class="py-3.5 px-4 min-w-[220px]">PEMBAHASAN SINGKAT</th>
+						<th class="py-3.5 px-4 w-20 text-center">AKSI</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-800/80">
@@ -80,23 +80,35 @@
 							<td class="py-3.5 px-4 font-mono font-bold text-white align-top text-center">
 								{q.questionNumber}
 							</td>
-							<td class="py-3.5 px-4 font-medium text-emerald-400 align-top">
-								<Badge variant="emerald" size="sm">{q.section}</Badge>
+							<td class="py-3.5 px-4 font-semibold text-emerald-400 align-top">
+								{q.section}
 							</td>
 							<td class="py-3.5 px-4 text-slate-200 align-top space-y-2">
 								<p class="leading-relaxed font-semibold text-white">{q.questionText}</p>
+								{#if q.optionA || q.optionB || q.optionC || q.optionD}
+									<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] pt-1">
+										<div class="p-2 rounded-xl bg-slate-850/90 border border-slate-800 text-slate-300">
+											<strong class="text-slate-400 font-bold mr-1">A.</strong> {q.optionA}
+										</div>
+										<div class="p-2 rounded-xl bg-slate-850/90 border border-slate-800 text-slate-300">
+											<strong class="text-slate-400 font-bold mr-1">B.</strong> {q.optionB}
+										</div>
+										<div class="p-2 rounded-xl bg-slate-850/90 border border-slate-800 text-slate-300">
+											<strong class="text-slate-400 font-bold mr-1">C.</strong> {q.optionC}
+										</div>
+										<div class="p-2 rounded-xl bg-slate-850/90 border border-slate-800 text-slate-300">
+											<strong class="text-slate-400 font-bold mr-1">D.</strong> {q.optionD}
+										</div>
+									</div>
+								{/if}
 							</td>
 							<td class="py-3.5 px-4 align-top">
-								<div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/50 text-emerald-200 text-xs leading-relaxed font-medium">
-									<div class="flex items-center gap-1.5 text-emerald-400 font-bold mb-1.5 text-[11px] uppercase tracking-wide">
-										<KeyRound class="w-3.5 h-3.5" />
-										<span>Referensi Jawaban Resmi</span>
-									</div>
-									<p class="whitespace-pre-line">{q.correctAnswer}</p>
+								<div class="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-700/60 text-emerald-400 font-semibold text-xs leading-relaxed">
+									<p class="whitespace-pre-line">Opsi {q.correctAnswer}</p>
 								</div>
 							</td>
-							<td class="py-3.5 px-4 text-slate-400 align-top">
-								<div class="p-3 rounded-xl bg-slate-850/70 border border-slate-800 text-slate-300 text-xs leading-relaxed">
+							<td class="py-3.5 px-4 text-slate-300 align-top">
+								<div class="p-2 text-slate-300 text-xs leading-relaxed">
 									{q.explanation || '-'}
 								</div>
 							</td>
@@ -105,7 +117,7 @@
 									type="button"
 									onclick={() => openEditModal(q)}
 									class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-									title="Edit Kunci Jawaban Essay & Pembahasan"
+									title="Edit Kunci Jawaban & Pembahasan"
 								>
 									<Edit3 class="w-3.5 h-3.5" />
 									<span>Edit</span>

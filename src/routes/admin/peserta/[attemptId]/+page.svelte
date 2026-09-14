@@ -73,7 +73,7 @@
 
 	const correctCount = $derived(detailedQuestions.filter((d: any) => d.isCorrect).length);
 	const wrongCount = $derived(detailedQuestions.length - correctCount);
-	const isPassed = $derived(manualScore >= 65);
+	const isPassed = $derived(manualScore >= 70);
 </script>
 
 <svelte:head>
@@ -178,7 +178,7 @@
 					<Sparkles class="w-3.5 h-3.5 mr-1.5 {isRecalculating ? 'animate-spin' : ''}" />
 					<span>{isRecalculating ? 'Menghitung...' : 'Hitung Ulang Otomatis'}</span>
 				</button>
-				<Badge variant="emerald" size="sm">Standar KKM: 65</Badge>
+				<Badge variant="emerald" size="sm">Standar KKM: 70</Badge>
 			</div>
 		</div>
 

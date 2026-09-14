@@ -175,7 +175,7 @@
 			</div>
 
 			<div class="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
-				<span>Batas Kelulusan Kaderisasi: <strong>65 Poin</strong></span>
+				<span>Batas Kelulusan Kaderisasi (KKM): <strong>70 Poin</strong></span>
 				<a href="/admin/peserta" class="text-emerald-400 hover:text-emerald-300 font-bold inline-flex items-center gap-1">
 					Buka Daftar Lengkap Peserta
 					<ArrowRight class="w-3.5 h-3.5" />

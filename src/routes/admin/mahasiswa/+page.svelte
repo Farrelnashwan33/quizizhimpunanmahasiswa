@@ -121,19 +121,29 @@
 									{new Date(s.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
 								</td>
 								<td class="py-3.5 px-4">
-									{#if lastAttempt?.status === 'completed'}
-										<Badge variant="emerald" size="sm">Selesai</Badge>
-									{:else if lastAttempt?.status === 'in_progress'}
-										<Badge variant="amber" size="sm">Sedang Mengerjakan</Badge>
-									{:else}
-										<Badge variant="slate" size="sm">Belum Memulai</Badge>
-									{/if}
+									<div class="flex items-center gap-1.5 flex-wrap">
+										{#if lastAttempt?.status === 'completed'}
+											<Badge variant="emerald" size="sm">Selesai</Badge>
+										{:else if lastAttempt?.status === 'in_progress'}
+											<Badge variant="amber" size="sm">Sedang Mengerjakan</Badge>
+										{:else}
+											<Badge variant="slate" size="sm">Belum Memulai</Badge>
+										{/if}
+										{#if s.totalAttempts > 1}
+											<Badge variant="blue" size="sm">{s.totalAttempts}x Attempt</Badge>
+										{/if}
+									</div>
 								</td>
 								<td class="py-3.5 px-4 text-center">
 									{#if lastAttempt?.status === 'completed' && lastAttempt?.score !== null}
-										<span class="text-sm font-black font-mono {(lastAttempt.score ?? 0) >= 65 ? 'text-emerald-400' : 'text-rose-400'}">
-											{lastAttempt.score}
-										</span>
+										<div>
+											<span class="text-sm font-black font-mono {(lastAttempt.score ?? 0) >= 70 ? 'text-emerald-400' : 'text-rose-400'}">
+												{lastAttempt.score}
+											</span>
+											{#if s.bestScore !== null && s.bestScore !== lastAttempt.score}
+												<div class="text-[10px] text-slate-400">Best: {s.bestScore}</div>
+											{/if}
+										</div>
 									{:else}
 										<span class="text-slate-500">-</span>
 									{/if}

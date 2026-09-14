@@ -6,7 +6,7 @@ import { OFFICIAL_30_QUESTIONS } from '$lib/data/questions';
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
-		const { studentName, nim, programStudi, whatsapp } = body;
+		const { studentName, nim, programStudi, whatsapp, forceNew, retry } = body;
 
 		if (!studentName?.trim() || !nim?.trim() || !programStudi?.trim()) {
 			return json(
@@ -19,7 +19,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			studentName,
 			nim,
 			programStudi,
-			whatsapp
+			whatsapp,
+			forceNew: !!(forceNew || retry)
 		});
 
 		// Return sanitized questions (no correctAnswer or explanation exposed)

@@ -18,7 +18,8 @@
 		X,
 		FileText,
 		Printer,
-		PenLine
+		PenLine,
+		RotateCcw
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -30,7 +31,7 @@
 
 	const score = $derived(attempt.score);
 	const isGraded = $derived(score !== null && score !== undefined);
-	const isPassed = $derived(isGraded && typeof score === 'number' && score >= 65);
+	const isPassed = $derived(isGraded && typeof score === 'number' && score >= 70);
 
 	// Calculate duration
 	const durationText = $derived(() => {
@@ -62,17 +63,65 @@
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 	<!-- Top Navigation -->
-	<div class="mb-6 flex items-center justify-between">
+	<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
 		<Button href="/dashboard" variant="outline" size="sm">
 			<ArrowLeft class="w-4 h-4 mr-1.5" />
 			<span>Kembali ke Dashboard</span>
 		</Button>
 
-		<Button variant="ghost" size="sm" onclick={() => window.print()} class="print:hidden">
-			<Printer class="w-4 h-4 mr-1.5" />
-			<span>Cetak Bukti Hasil</span>
-		</Button>
+		<div class="flex items-center gap-2">
+			<Button
+				href="/quiz?retry=true"
+				variant={isPassed ? 'outline' : 'primary'}
+				size="sm"
+				class={!isPassed ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold' : ''}
+			>
+				<RotateCcw class="w-4 h-4 mr-1.5" />
+				<span>{isPassed ? 'Kerjakan Ulang' : 'Ulangi Kuis (Remedial)'}</span>
+			</Button>
+
+			<Button variant="ghost" size="sm" onclick={() => window.print()} class="print:hidden">
+				<Printer class="w-4 h-4 mr-1.5" />
+				<span>Cetak Bukti Hasil</span>
+			</Button>
+		</div>
 	</div>
+
+	<!-- Remedial Notice Banner (If Score < 70) -->
+	{#if isGraded && !isPassed}
+		<div class="mb-6 p-4 sm:p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 shadow-sm">
+			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+				<div class="flex items-start gap-3">
+					<div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+						<RotateCcw class="w-5 h-5" />
+					</div>
+					<div>
+						<div class="flex items-center gap-2 mb-1">
+							<Badge variant="amber" size="sm">Kesempatan Remedial Terbuka</Badge>
+							<span class="text-xs font-bold text-amber-900">Standar Minimal KKM: 70 Poin</span>
+						</div>
+						<h3 class="text-sm sm:text-base font-extrabold text-amber-950">
+							Nilai Anda ({score ?? 0}/100) Belum Mencapai Batas Minimal KKM
+						</h3>
+						<p class="text-xs text-amber-800 mt-1 leading-relaxed">
+							Jangan berkecil hati! Anda dapat langsung memulai pengerjaan ulang (remedial) sekarang. Riwayat pengerjaan sebelumnya tetap tersimpan aman di database admin sebagai arsip.
+						</p>
+					</div>
+				</div>
+				<div class="shrink-0 sm:self-center">
+					<Button
+						href="/quiz?retry=true"
+						variant="primary"
+						size="md"
+						class="bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md shadow-amber-600/20"
+					>
+						<RotateCcw class="w-4 h-4 mr-2" />
+						<span>Mulai Remedial Sekarang</span>
+					</Button>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Main Score Result Card -->
 	<Card class="overflow-hidden border-slate-200 shadow-xl mb-8">
@@ -119,7 +168,7 @@
 						<span class="text-slate-400 font-bold text-sm">/100</span>
 					</div>
 					<Badge variant={isPassed ? 'emerald' : 'amber'} size="sm" class="self-center">
-						{isPassed ? 'Memenuhi Standar KKM' : 'Belum Memenuhi KKM'}
+						{isPassed ? 'Memenuhi Standar KKM (≥ 70)' : 'Belum Memenuhi KKM (< 70)'}
 					</Badge>
 				</div>
 
@@ -146,7 +195,7 @@
 
 			<!-- Toggle Review Button -->
 			{#if canReviewAnswers && answers.length > 0}
-				<div class="pt-4 border-t border-slate-100 text-center">
+				<div class="pt-4 border-t border-slate-100 text-center flex flex-wrap items-center justify-center gap-3">
 					<Button
 						variant="primary"
 						size="md"
@@ -155,6 +204,18 @@
 						<FileText class="w-4 h-4 mr-2" />
 						<span>{showDetailedAnswers ? 'Sembunyikan Lembar Jawaban' : 'Lihat Hasil Evaluasi & Pembahasan Lengkap (1–30)'}</span>
 					</Button>
+
+					{#if !isPassed}
+						<Button
+							href="/quiz?retry=true"
+							variant="outline"
+							size="md"
+							class="border-amber-400 text-amber-800 hover:bg-amber-50 font-bold"
+						>
+							<RotateCcw class="w-4 h-4 mr-2 text-amber-600" />
+							<span>Ulangi Pengerjaan Quiz (Remedial)</span>
+						</Button>
+					{/if}
 				</div>
 			{:else}
 				<div class="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-500">

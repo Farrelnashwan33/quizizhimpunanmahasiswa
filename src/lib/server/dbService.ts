@@ -595,7 +595,7 @@ export async function getHasilStatistics() {
 	let totalFailed = 0;
 
 	for (const att of completed) {
-		if ((att.score ?? 0) >= 65) totalPassed++;
+		if ((att.score ?? 0) >= 70) totalPassed++;
 		else totalFailed++;
 
 		if (att.answers && att.answers.length > 0) {
@@ -650,12 +650,28 @@ export async function getAllMahasiswa(params: { search?: string; prodi?: string 
 			id: att.id,
 			status: att.status,
 			score: att.score,
+			correctCount: att.correctCount,
+			wrongCount: att.wrongCount,
 			startedAt: att.startedAt,
 			submittedAt: att.submittedAt
 		});
 	}
 
-	let students = Array.from(studentMap.values());
+	let students = Array.from(studentMap.values()).map((st) => {
+		// Sort attempts: newest first
+		st.attempts.sort((a: any, b: any) => {
+			const tA = new Date(a.submittedAt || a.startedAt).getTime();
+			const tB = new Date(b.submittedAt || b.startedAt).getTime();
+			return tB - tA;
+		});
+		const completedAttempts = st.attempts.filter((a: any) => a.status === 'completed' && a.score !== null);
+		const bestScore = completedAttempts.length > 0 ? Math.max(...completedAttempts.map((a: any) => Number(a.score))) : null;
+		return {
+			...st,
+			bestScore,
+			totalAttempts: st.attempts.length
+		};
+	});
 
 	if (search) {
 		const q = search.toLowerCase();
@@ -688,11 +704,13 @@ export async function startQuizAttempt(data: {
 	nim: string;
 	programStudi: string;
 	whatsapp?: string | null;
+	forceNew?: boolean;
 }) {
 	const cleanName = data.studentName.trim();
 	const cleanNim = data.nim.trim();
 	const cleanProdi = data.programStudi.trim();
 	const cleanWa = data.whatsapp?.trim() || null;
+	const forceNew = !!data.forceNew;
 	const studentEmail = `${cleanNim}@student.ut.ac.id`;
 	const now = new Date();
 
@@ -733,16 +751,20 @@ export async function startQuizAttempt(data: {
 				studentId = supaProf.id;
 			}
 
-			// Check if student already has an in_progress attempt
-			const { data: existingSupaAttempt } = await supabaseAdmin
-				.from('quiz_attempts')
-				.select('id, started_at, status')
-				.eq('student_id', studentId)
-				.eq('quiz_id', quizId)
-				.eq('status', 'in_progress')
-				.order('started_at', { ascending: false })
-				.limit(1)
-				.maybeSingle();
+			// Check if student already has an in_progress attempt (unless forceNew is requested)
+			let existingSupaAttempt: any = null;
+			if (!forceNew) {
+				const { data: foundAttempt } = await supabaseAdmin
+					.from('quiz_attempts')
+					.select('id, started_at, status')
+					.eq('student_id', studentId)
+					.eq('quiz_id', quizId)
+					.eq('status', 'in_progress')
+					.order('started_at', { ascending: false })
+					.limit(1)
+					.maybeSingle();
+				existingSupaAttempt = foundAttempt;
+			}
 
 			if (existingSupaAttempt && existingSupaAttempt.id) {
 				attemptId = existingSupaAttempt.id;
@@ -767,18 +789,20 @@ export async function startQuizAttempt(data: {
 			}
 
 			// Load any existing answers for this attempt from Supabase
-			const { data: existingAnswers } = await supabaseAdmin
-				.from('answers')
-				.select('question_id, selected_answer')
-				.eq('attempt_id', attemptId);
+			if (!forceNew) {
+				const { data: existingAnswers } = await supabaseAdmin
+					.from('answers')
+					.select('question_id, selected_answer')
+					.eq('attempt_id', attemptId);
 
-			if (existingAnswers && existingAnswers.length > 0) {
-				for (const a of existingAnswers) {
-					if (a.selected_answer) {
-						const num = extractQuestionNumber(a.question_id);
-						savedAnswers[a.question_id] = a.selected_answer;
-						savedAnswers[`q-${String(num).padStart(2, '0')}`] = a.selected_answer;
-						savedAnswers[String(num)] = a.selected_answer;
+				if (existingAnswers && existingAnswers.length > 0) {
+					for (const a of existingAnswers) {
+						if (a.selected_answer) {
+							const num = extractQuestionNumber(a.question_id);
+							savedAnswers[a.question_id] = a.selected_answer;
+							savedAnswers[`q-${String(num).padStart(2, '0')}`] = a.selected_answer;
+							savedAnswers[String(num)] = a.selected_answer;
+						}
 					}
 				}
 			}
@@ -828,11 +852,14 @@ export async function startQuizAttempt(data: {
 
 			studentId = profile.id;
 
-			let targetAttempt = await prisma.quizAttempt.findFirst({
-				where: { studentId: profile.id, quizId, status: 'in_progress' },
-				orderBy: { startedAt: 'desc' },
-				include: { answers: true }
-			});
+			let targetAttempt: any = null;
+			if (!forceNew) {
+				targetAttempt = await prisma.quizAttempt.findFirst({
+					where: { studentId: profile.id, quizId, status: 'in_progress' },
+					orderBy: { startedAt: 'desc' },
+					include: { answers: true }
+				});
+			}
 
 			if (!targetAttempt) {
 				targetAttempt = await prisma.quizAttempt.create({
@@ -850,7 +877,7 @@ export async function startQuizAttempt(data: {
 
 			if (targetAttempt) {
 				attemptId = targetAttempt.id;
-				if (targetAttempt.answers) {
+				if (!forceNew && targetAttempt.answers) {
 					for (const ans of targetAttempt.answers) {
 						if (ans.selectedAnswer) {
 							const num = extractQuestionNumber(ans.questionId);
@@ -942,6 +969,7 @@ export async function loadAttemptAnswers(params: { attemptId?: string; nim?: str
 						.from('quiz_attempts')
 						.select('*')
 						.eq('student_id', prof.id)
+						.eq('status', 'in_progress')
 						.order('started_at', { ascending: false })
 						.limit(1)
 						.maybeSingle();

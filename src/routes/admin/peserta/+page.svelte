@@ -271,7 +271,7 @@
 				<tbody class="divide-y divide-slate-800/80">
 					{#if attempts.length > 0}
 						{#each attempts as att, idx}
-							{@const isPassed = (att.score ?? 0) >= 65}
+							{@const isPassed = (att.score ?? 0) >= 70}
 							<tr class="hover:bg-slate-800/50 transition-colors">
 								<td class="py-3.5 px-4 font-mono text-slate-500">
 									{(currentPage - 1) * 15 + idx + 1}

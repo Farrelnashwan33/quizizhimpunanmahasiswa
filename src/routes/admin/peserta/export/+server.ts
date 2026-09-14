@@ -31,7 +31,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 		const rows = combined.map((att, index) => {
 			const score = att.score ?? 0;
-			const isPassed = score >= 65;
+			const isPassed = score >= 70;
 			const student = att.student || {};
 
 			return [
@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 				`"\t${student.whatsapp || '-'}"`,
 				`"${student.email || '-'}"`,
 				score,
-				isPassed ? 'LULUS (>=65)' : 'TIDAK LULUS (<65)',
+				isPassed ? 'LULUS (>=70)' : 'TIDAK LULUS (<70)',
 				att.correctCount ?? 0,
 				att.wrongCount ?? 0,
 				att.totalQuestions ?? 30,

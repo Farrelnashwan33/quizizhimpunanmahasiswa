@@ -66,7 +66,7 @@
 				<TrendingUp class="w-5 h-5 text-emerald-400" />
 			</div>
 			<p class="text-3xl font-black text-emerald-400">{passRate}%</p>
-			<p class="text-xs text-slate-500 mt-1">Standar KKM: Skor ≥ 65</p>
+			<p class="text-xs text-slate-500 mt-1">Standar KKM: Skor ≥ 70</p>
 		</div>
 
 		<div class="p-6 rounded-2xl bg-slate-900 border border-slate-800">

@@ -107,6 +107,7 @@ export const actions: Actions = {
 		const correctAnswer = (formData.get('correctAnswer') as string)?.trim() || '';
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
 		const rawNum = formData.get('questionNumber');
+		const target = OFFICIAL_30_QUESTIONS.find((q) => q.id === id || String(q.questionNumber) === id);
 		const questionNumber = rawNum ? parseInt(rawNum as string, 10) : (target?.questionNumber || 1);
 
 		if (!id || !section || !questionText || !correctAnswer) {
@@ -114,7 +115,6 @@ export const actions: Actions = {
 		}
 
 		// Update in-memory
-		const target = OFFICIAL_30_QUESTIONS.find((q) => q.id === id || String(q.questionNumber) === id);
 		if (target) {
 			target.section = section;
 			target.questionText = questionText;

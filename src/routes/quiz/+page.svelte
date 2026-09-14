@@ -32,7 +32,9 @@
 		ShieldAlert,
 		AlertTriangle,
 		PenLine,
-		Save
+		Save,
+		RotateCcw,
+		RefreshCw
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -75,20 +77,35 @@
 	// Debounce timer for saving answers
 	let saveTimeout: any = null;
 
-	onMount(async () => {
+	onMount(() => {
 		let loadedAttemptId = '';
 		let loadedNim = '';
 
+		// Check if remedial/retake requested via query param
+		try {
+			const urlParams = new URLSearchParams(window.location.search);
+			if (urlParams.get('retry') === 'true') {
+				localStorage.removeItem('quiz_fst_result');
+				localStorage.removeItem('quiz_fst_answers');
+				localStorage.removeItem('quiz_fst_attempt_id');
+				localStorage.removeItem('quiz_fst_tab_violations');
+				quizResult = null;
+				answers = {};
+				attemptId = '';
+				tabViolationsCount = 0;
+			}
+		} catch (e) {}
+
 		try {
 			const savedResult = localStorage.getItem('quiz_fst_result');
-			if (savedResult) {
+			if (savedResult && !quizResult) {
 				quizResult = JSON.parse(savedResult);
 				isIdentitySubmitted = true;
 			}
 
 			const savedId = localStorage.getItem('quiz_fst_student');
 			const savedAttemptId = localStorage.getItem('quiz_fst_attempt_id');
-			if (savedAttemptId) {
+			if (savedAttemptId && !quizResult) {
 				attemptId = savedAttemptId;
 				loadedAttemptId = savedAttemptId;
 			}
@@ -105,7 +122,7 @@
 			}
 
 			const savedAns = localStorage.getItem('quiz_fst_answers');
-			if (savedAns) {
+			if (savedAns && !quizResult) {
 				answers = JSON.parse(savedAns);
 			}
 
@@ -115,36 +132,38 @@
 			}
 		} catch (e) {}
 
-		// Fetch and restore saved essay answers from Supabase Database on load/refresh
-		if (loadedAttemptId || loadedNim) {
-			try {
-				const res = await fetch(`/api/quiz/load-attempt?attemptId=${encodeURIComponent(loadedAttemptId)}&nim=${encodeURIComponent(loadedNim)}`);
-				if (res.ok) {
-					const loadData = await res.json();
-					if (loadData.success) {
-						if (loadData.attempt?.id) {
-							attemptId = loadData.attempt.id;
-							try { localStorage.setItem('quiz_fst_attempt_id', attemptId); } catch (e) {}
-						}
-						if (loadData.savedAnswers && Object.keys(loadData.savedAnswers).length > 0) {
-							answers = { ...answers, ...loadData.savedAnswers };
-							try {
-								localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
-							} catch (e) {}
+		// Fetch and restore saved essay answers from Supabase Database on load/refresh (only if not finished)
+		if ((loadedAttemptId || loadedNim) && !quizResult) {
+			(async () => {
+				try {
+					const res = await fetch(`/api/quiz/load-attempt?attemptId=${encodeURIComponent(loadedAttemptId)}&nim=${encodeURIComponent(loadedNim)}`);
+					if (res.ok) {
+						const loadData = await res.json();
+						if (loadData.success) {
+							if (loadData.attempt?.id) {
+								attemptId = loadData.attempt.id;
+								try { localStorage.setItem('quiz_fst_attempt_id', attemptId); } catch (e) {}
+							}
+							if (loadData.savedAnswers && Object.keys(loadData.savedAnswers).length > 0) {
+								answers = { ...answers, ...loadData.savedAnswers };
+								try {
+									localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
+								} catch (e) {}
+							}
 						}
 					}
+				} catch (loadErr) {
+					console.warn('Notice: Background attempt recovery check:', loadErr);
 				}
-			} catch (loadErr) {
-				console.warn('Notice: Background attempt recovery check:', loadErr);
-			}
+			})();
 		}
 
-		// Anti-Cheat & Integrity Handlers
+		// Anti-Cheat & Integrity Handlers (Gentle Warning without premature auto-submit)
 		let lastViolationTime = 0;
 		const recordTabViolation = () => {
 			if (!isIdentitySubmitted || quizResult || isSubmitting) return;
 			const now = Date.now();
-			if (now - lastViolationTime < 1500) return;
+			if (now - lastViolationTime < 4000) return;
 			lastViolationTime = now;
 
 			tabViolationsCount += 1;
@@ -154,26 +173,13 @@
 				localStorage.setItem('quiz_fst_tab_violations', String(tabViolationsCount));
 			} catch (e) {}
 
-			if (tabViolationsCount >= MAX_TAB_VIOLATIONS) {
-				isAutoSubmittedDueToViolations = true;
-				toasts.error('Batas toleransi perpindahan tab habis! Kuis otomatis dikirimkan.');
-				setTimeout(() => {
-					showTabWarningModal = false;
-					handleSubmitQuiz();
-				}, 1500);
-			} else {
-				toasts.error(`Peringatan: Terdeteksi meninggalkan tab kuis! (${tabViolationsCount}/${MAX_TAB_VIOLATIONS})`);
-			}
+			toasts.warning(`Peringatan: Tetap berada di halaman ujian agar fokus pengerjaan kuis tidak terganggu. (${tabViolationsCount}x berpindah)`);
 		};
 
 		const handleVisibilityChange = () => {
 			if (document.hidden) {
 				recordTabViolation();
 			}
-		};
-
-		const handleWindowBlur = () => {
-			recordTabViolation();
 		};
 
 		const handleCopy = (e: ClipboardEvent) => {
@@ -217,7 +223,6 @@
 		};
 
 		document.addEventListener('visibilitychange', handleVisibilityChange);
-		window.addEventListener('blur', handleWindowBlur);
 		document.addEventListener('copy', handleCopy);
 		document.addEventListener('paste', handlePaste);
 		document.addEventListener('contextmenu', handleContextMenu);
@@ -226,7 +231,6 @@
 
 		return () => {
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
-			window.removeEventListener('blur', handleWindowBlur);
 			document.removeEventListener('copy', handleCopy);
 			document.removeEventListener('paste', handlePaste);
 			document.removeEventListener('contextmenu', handleContextMenu);
@@ -235,7 +239,7 @@
 		};
 	});
 
-	async function startQuiz() {
+	async function startQuiz(forceNew = false) {
 		if (!studentName.trim() || !nim.trim() || !programStudi.trim()) {
 			toasts.error('Nama Lengkap, NIM, dan Program Studi wajib diisi.');
 			return;
@@ -251,7 +255,8 @@
 					studentName: studentName.trim(),
 					nim: nim.trim(),
 					programStudi: programStudi.trim(),
-					whatsapp: whatsapp.trim()
+					whatsapp: whatsapp.trim(),
+					forceNew
 				})
 			});
 
@@ -259,22 +264,34 @@
 
 			if (data.success) {
 				attemptId = data.attemptId;
+				isIdentitySubmitted = true;
+				quizResult = null;
+				tabViolationsCount = 0;
+				showTabWarningModal = false;
+
+				if (forceNew) {
+					answers = {};
+					currentIndex = 0;
+				} else if (data.savedAnswers && Object.keys(data.savedAnswers).length > 0) {
+					answers = { ...answers, ...data.savedAnswers };
+				}
+
 				try {
 					localStorage.setItem(
 						'quiz_fst_student',
 						JSON.stringify({ studentName, nim, programStudi, whatsapp })
 					);
 					localStorage.setItem('quiz_fst_attempt_id', data.attemptId);
+					localStorage.removeItem('quiz_fst_result');
+					if (forceNew) {
+						localStorage.removeItem('quiz_fst_answers');
+						localStorage.removeItem('quiz_fst_tab_violations');
+					} else {
+						localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
+					}
 				} catch (e) {}
 
-				if (data.savedAnswers && Object.keys(data.savedAnswers).length > 0) {
-					answers = { ...answers, ...data.savedAnswers };
-					try {
-						localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
-					} catch (e) {}
-				}
-
-				isIdentitySubmitted = true;
+				toasts.success(forceNew ? 'Percobaan remedial kuis berhasil dimulai! Selamat mengerjakan.' : 'Selamat mengerjakan kuis!');
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			} else {
 				toasts.error(data.error || 'Gagal memulai kuis di sistem database.');
@@ -286,6 +303,24 @@
 		} finally {
 			isStarting = false;
 		}
+	}
+
+	async function handleStartRemedial() {
+		try {
+			localStorage.removeItem('quiz_fst_result');
+			localStorage.removeItem('quiz_fst_answers');
+			localStorage.removeItem('quiz_fst_attempt_id');
+			localStorage.removeItem('quiz_fst_tab_violations');
+		} catch (e) {}
+
+		quizResult = null;
+		answers = {};
+		currentIndex = 0;
+		attemptId = '';
+		tabViolationsCount = 0;
+		showDetailedReview = false;
+
+		await startQuiz(true);
 	}
 
 	function handleAnswerChange(text: string) {
@@ -740,21 +775,71 @@
 	<!-- STATE 3: SUBMISSION COMPLETED WITH AUTOMATIC SCORE -->
 	{:else}
 		{@const finalScore = quizResult.score ?? 0}
-		{@const isPassed = finalScore >= 65}
+		{@const isPassed = finalScore >= 70}
 
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 			<!-- Header Buttons -->
-			<div class="mb-6 flex items-center justify-between">
+			<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
 				<Button href="/" variant="outline" size="sm">
 					<ArrowLeft class="w-4 h-4 mr-1.5" />
 					<span>Kembali ke Beranda</span>
 				</Button>
 
-				<Button variant="outline" size="sm" onclick={() => window.print()}>
-					<Printer class="w-4 h-4 mr-1.5" />
-					<span>Cetak Hasil Quiz</span>
-				</Button>
+				<div class="flex items-center gap-2">
+					<Button
+						variant={isPassed ? 'outline' : 'primary'}
+						size="sm"
+						onclick={handleStartRemedial}
+						loading={isStarting}
+						class={!isPassed ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold' : ''}
+					>
+						<RotateCcw class="w-4 h-4 mr-1.5" />
+						<span>{isPassed ? 'Kerjakan Ulang' : 'Ulangi Kuis (Remedial)'}</span>
+					</Button>
+
+					<Button variant="outline" size="sm" onclick={() => window.print()}>
+						<Printer class="w-4 h-4 mr-1.5" />
+						<span>Cetak Hasil Quiz</span>
+					</Button>
+				</div>
 			</div>
+
+			<!-- Remedial Notice Banner (If Score < 70) -->
+			{#if !isPassed}
+				<div class="mb-6 p-4 sm:p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 shadow-sm">
+					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+						<div class="flex items-start gap-3">
+							<div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+								<RotateCcw class="w-5 h-5" />
+							</div>
+							<div>
+								<div class="flex items-center gap-2 mb-1">
+									<Badge variant="amber" size="sm">Kesempatan Remedial Terbuka</Badge>
+									<span class="text-xs font-bold text-amber-900">Standar Minimal KKM: 70 Poin</span>
+								</div>
+								<h3 class="text-sm sm:text-base font-extrabold text-amber-950">
+									Nilai Anda ({finalScore}/100) Belum Mencapai Batas Minimal KKM
+								</h3>
+								<p class="text-xs text-amber-800 mt-1 leading-relaxed">
+									Jangan berkecil hati! Anda dapat langsung memulai pengerjaan ulang (remedial) sekarang. Riwayat pengerjaan sebelumnya tetap tersimpan aman di database admin sebagai arsip.
+								</p>
+							</div>
+						</div>
+						<div class="shrink-0 sm:self-center">
+							<Button
+								variant="primary"
+								size="md"
+								class="bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md shadow-amber-600/20"
+								onclick={handleStartRemedial}
+								loading={isStarting}
+							>
+								<RotateCcw class="w-4 h-4 mr-2" />
+								<span>Mulai Remedial Sekarang</span>
+							</Button>
+						</div>
+					</div>
+				</div>
+			{/if}
 
 			<!-- Result Card -->
 			<Card class="overflow-hidden border-slate-200 shadow-xl mb-8">
@@ -794,7 +879,7 @@
 								<span class="text-slate-400 font-bold text-sm">/100</span>
 							</div>
 							<Badge variant={isPassed ? 'emerald' : 'amber'} size="sm" class="self-center">
-								{isPassed ? 'Memenuhi Standar KKM' : 'Belum Memenuhi KKM'}
+								{isPassed ? 'Memenuhi Standar KKM (≥ 70)' : 'Belum Memenuhi KKM (< 70)'}
 							</Badge>
 						</div>
 
@@ -817,7 +902,7 @@
 						</div>
 					</div>
 
-					<div class="pt-2 text-center">
+					<div class="pt-2 text-center flex flex-wrap items-center justify-center gap-3">
 						<Button
 							variant="primary"
 							size="md"
@@ -826,6 +911,19 @@
 							<FileText class="w-4 h-4 mr-2" />
 							<span>{showDetailedReview ? 'Sembunyikan Lembar Jawaban' : 'Lihat Hasil Evaluasi & Pembahasan Lengkap (1–30)'}</span>
 						</Button>
+
+						{#if !isPassed}
+							<Button
+								variant="outline"
+								size="md"
+								class="border-amber-400 text-amber-800 hover:bg-amber-50 font-bold"
+								onclick={handleStartRemedial}
+								loading={isStarting}
+							>
+								<RotateCcw class="w-4 h-4 mr-2 text-amber-600" />
+								<span>Ulangi Pengerjaan Quiz (Remedial)</span>
+							</Button>
+						{/if}
 					</div>
 				</div>
 			</Card>
@@ -979,64 +1077,40 @@
 <!-- Anti-Tab Switch Warning Modal -->
 <Modal bind:open={showTabWarningModal} title="Peringatan Integritas Ujian" maxWidth="md">
 	<div class="space-y-4 text-center py-2">
-		<div class="w-14 h-14 rounded-2xl {tabViolationsCount >= MAX_TAB_VIOLATIONS ? 'bg-rose-100 text-rose-600 animate-bounce' : 'bg-amber-100 text-amber-600'} flex items-center justify-center mx-auto shadow-sm">
+		<div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
 			<ShieldAlert class="w-8 h-8" />
 		</div>
 
 		<div>
 			<h3 class="text-base font-extrabold text-slate-900">
-				{tabViolationsCount >= MAX_TAB_VIOLATIONS ? 'Batas Pelanggaran Terlampaui!' : 'Terdeteksi Meninggalkan Halaman Kuis!'}
+				Terdeteksi Meninggalkan Halaman Kuis
 			</h3>
 			<p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
-				{#if tabViolationsCount >= MAX_TAB_VIOLATIONS}
-					Anda telah meninggalkan halaman kuis sebanyak <strong>{tabViolationsCount} kali</strong> (mencapai batas maksimal). Sistem sedang <strong>mengirimkan jawaban Anda secara otomatis</strong> ke panitia.
-				{:else}
-					Anda terdeteksi berpindah tab, meminimalkan browser, atau membuka aplikasi lain. Demi menjaga kejujuran dan integritas ujian, seluruh aktivitas perpindahan tab direkam oleh sistem.
-				{/if}
+				Anda terdeteksi berpindah tab, meminimalkan jendela browser, atau membuka aplikasi lain ({tabViolationsCount}x terdeteksi). Demi menjaga fokus dan kelancaran ujian, mohon selesaikan seluruh butir soal sebelum menutup halaman.
 			</p>
 		</div>
 
 		<!-- Violation Counter Card -->
 		<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
 			<div class="flex items-center justify-between font-bold mb-2">
-				<span class="text-slate-700">Status Pelanggaran Tab:</span>
-				<span class="{tabViolationsCount >= 2 ? 'text-rose-600 font-extrabold' : 'text-amber-600'}">
-					{tabViolationsCount} dari {MAX_TAB_VIOLATIONS} Toleransi
+				<span class="text-slate-700">Perpindahan Tab:</span>
+				<span class="text-amber-600 font-extrabold">
+					{tabViolationsCount} kali
 				</span>
 			</div>
-			<div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-				<div
-					class="h-full transition-all duration-300 {tabViolationsCount >= MAX_TAB_VIOLATIONS ? 'bg-rose-600' : tabViolationsCount === 2 ? 'bg-amber-500' : 'bg-emerald-500'}"
-					style="width: {Math.min(100, (tabViolationsCount / MAX_TAB_VIOLATIONS) * 100)}%"
-				></div>
-			</div>
-			<p class="text-[11px] text-slate-500 mt-2 text-left">
-				⚠️ <em>Kuis akan otomatis dikirim paksa jika Anda berganti tab {MAX_TAB_VIOLATIONS} kali.</em>
+			<p class="text-[11px] text-slate-500 text-left">
+				💡 <em>Jawaban yang telah Anda tulis tersimpan otomatis secara real-time. Pastikan Anda menekan tombol <strong>Kirim Jawaban</strong> setelah selesai mengerjakan semua soal.</em>
 			</p>
 		</div>
 	</div>
 
 	{#snippet footer()}
-		{#if tabViolationsCount < MAX_TAB_VIOLATIONS}
-			<Button
-				variant="primary"
-				fullWidth
-				onclick={() => showTabWarningModal = false}
-			>
-				Saya Mengerti & Kembali Mengerjakan
-			</Button>
-		{:else}
-			<Button
-				variant="danger"
-				fullWidth
-				loading={isSubmitting}
-				onclick={() => {
-					showTabWarningModal = false;
-					handleSubmitQuiz();
-				}}
-			>
-				Kirim Sekarang
-			</Button>
-		{/if}
+		<Button
+			variant="primary"
+			fullWidth
+			onclick={() => showTabWarningModal = false}
+		>
+			Saya Mengerti & Lanjutkan Mengerjakan
+		</Button>
 	{/snippet}
 </Modal>

@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
-import { evaluateEssayItem, OFFICIAL_30_QUESTIONS } from '$lib/server/dbService';
+import { evaluateQuestionAnswer, OFFICIAL_30_QUESTIONS } from '$lib/server/dbService';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
@@ -51,7 +51,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			qMap.set(`num_${q.questionNumber}`, q.id);
 		}
 
-		// 3. Execute database transaction for automatic essay scoring
+		// 3. Execute database transaction for automatic multiple-choice scoring
 		const result = await prisma.$transaction(async (tx) => {
 			// Save any final in-flight answers if provided
 			if (finalAnswers && typeof finalAnswers === 'object') {
@@ -92,26 +92,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				}
 			}
 
-			let totalRawPoints = 0;
 			let correctCount = 0;
 
 			// Evaluate each of the 30 questions
 			for (const q of dbQuestions) {
 				const studentText = answerMap.get(q.id) || null;
-				const evaluation = evaluateEssayItem(q.questionNumber, studentText);
+				const evaluation = evaluateQuestionAnswer(q.questionNumber, studentText);
 
-				if (studentText) {
-					totalRawPoints += evaluation.points;
-					if (evaluation.isCorrect) correctCount++;
+				if (studentText && evaluation.isCorrect) {
+					correctCount++;
 				}
 
 				await tx.answer.updateMany({
 					where: { attemptId, questionId: q.id },
-					data: { isCorrect: evaluation.isCorrect }
+					data: {
+						isCorrect: evaluation.isCorrect,
+						selectedAnswer: evaluation.normalizedChoice || studentText
+					}
 				});
 			}
 
-			const computedScore = Math.min(100, Math.round(totalRawPoints * 10) / 10);
+			const computedScore = Math.min(100, Math.round((correctCount / totalQuestions) * 100));
 			const wrongCount = totalQuestions - correctCount;
 
 			// Update attempt record to completed with score

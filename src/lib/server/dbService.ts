@@ -475,13 +475,12 @@ export async function getQuizAttemptById(idOrNim: string) {
 			null
 		);
 
+		const evaluation = evaluateQuestionAnswer(q.questionNumber, studentChoice);
 		const isGraded = ans?.isCorrect !== undefined && ans?.isCorrect !== null;
-		const isCorrect = isGraded ? Boolean(ans.isCorrect) : null;
-		const status: string = isGraded
-			? (isCorrect ? 'Sesuai' : 'Perlu Evaluasi')
-			: studentChoice && studentChoice.trim() !== ''
-				? 'Sudah Dijawab'
-				: 'Belum Dijawab';
+		const isCorrect = isGraded ? Boolean(ans.isCorrect) : (studentChoice ? evaluation.isCorrect : null);
+		const status: string = studentChoice && String(studentChoice).trim() !== ''
+			? (isCorrect ? 'Benar' : 'Salah')
+			: 'Belum Dijawab';
 
 		return {
 			question: q,
@@ -842,10 +841,11 @@ export async function saveAnswer(data: {
 	const now = new Date();
 
 	let resolvedQuestionId: string | null = isUuid(questionId) ? questionId : null;
+	const numMatch = questionId.match(/\d+/);
+	const num = numMatch ? parseInt(numMatch[0], 10) : null;
+	const evalResult = num !== null ? evaluateQuestionAnswer(num, selectedAnswer) : null;
 
 	if (!resolvedQuestionId && isDatabaseConfigured) {
-		const numMatch = questionId.match(/\d+/);
-		const num = numMatch ? parseInt(numMatch[0], 10) : null;
 		if (num !== null) {
 			try {
 				const q = await prisma.question.findFirst({
@@ -864,8 +864,18 @@ export async function saveAnswer(data: {
 				where: {
 					attemptId_questionId: { attemptId, questionId: resolvedQuestionId }
 				},
-				update: { selectedAnswer, answeredAt: now },
-				create: { attemptId, questionId: resolvedQuestionId, selectedAnswer, answeredAt: now }
+				update: {
+					selectedAnswer: evalResult?.normalizedChoice || selectedAnswer,
+					isCorrect: evalResult ? evalResult.isCorrect : undefined,
+					answeredAt: now
+				},
+				create: {
+					attemptId,
+					questionId: resolvedQuestionId,
+					selectedAnswer: evalResult?.normalizedChoice || selectedAnswer,
+					isCorrect: evalResult ? evalResult.isCorrect : undefined,
+					answeredAt: now
+				}
 			});
 		} catch (err) {
 			console.warn('saveAnswer prisma notice:', err);
@@ -878,7 +888,8 @@ export async function saveAnswer(data: {
 				{
 					attempt_id: attemptId,
 					question_id: resolvedQuestionId,
-					selected_answer: selectedAnswer,
+					selected_answer: evalResult?.normalizedChoice || selectedAnswer,
+					is_correct: evalResult ? evalResult.isCorrect : undefined,
 					answered_at: now.toISOString()
 				},
 				{ onConflict: 'attempt_id,question_id' }
@@ -889,95 +900,77 @@ export async function saveAnswer(data: {
 	return { success: true };
 }
 
-const ESSAY_KEYWORDS: Record<number, string[]> = {
-	1: ['harmonis', 'harmoni', 'hubungan', 'menghormati', 'menghargai', 'keteraturan', 'antarwarga', 'tertib', 'ketertiban', 'etika', 'anggota', 'kondusif', 'rukun', 'konflik', 'pedoman', 'moral', 'iklim', 'nyaman', 'damai', 'kerja sama', 'tujuan bersama'],
-	2: ['mendengarkan', 'menyimak', 'selesai', 'utuh', 'santun', 'sopan', 'tanggapan', 'respons', 'merespons', 'bicara', 'pembicaraan', 'tidak memotong', 'memotong', 'menghargai', 'rasional', 'objektif', 'giliran', 'active listening', 'perhatian'],
-	3: ['tepat waktu', 'disiplin', 'kedisiplinan', 'tenggat', 'deadline', 'batas waktu', 'tuntas', 'tanggung jawab', 'hadir', 'kehadiran', 'aturan', 'mematuhi', 'komitmen', 'konsisten', 'kesepakatan'],
-	4: ['integritas', 'keselarasan', 'selaras', 'kejujuran', 'jujur', 'perkataan', 'perbuatan', 'ucapan', 'tindakan', 'konsistensi', 'konsisten', 'amanah', 'dipercaya', 'moral', 'prinsip', 'kebenaran'],
-	5: ['amanah', 'tanggung jawab', 'bertanggung jawab', 'pertanggungjawaban', 'transparan', 'keterbukaan', 'jujur', 'kejujuran', 'tuntas', 'laporan', 'lpj', 'konsekuensi', 'akuntabel', 'menyelesaikan tugas'],
-	6: ['kolektif', 'kolegial', 'musyawarah', 'mufakat', 'kebersamaan', 'bersama', 'kepentingan bersama', 'kesetaraan', 'gotong royong', 'organisasi', 'tim', 'solid', 'tidak egois', 'konsensus'],
-	7: ['responsif', 'tanggap', 'cepat', 'merespons', 'respons', 'koordinasi', 'kepekaan', 'komunikasi', 'proaktif', 'sigap', 'peduli', 'alur', 'konfirmasi', 'informasi'],
-	8: ['inisiatif', 'proaktif', 'tanpa menunggu', 'tanpa diperintah', 'bermanfaat', 'positif', 'kesadaran', 'mandiri', 'peka', 'bergerak', 'sukarela', 'tindakan nyata', 'peduli'],
-	9: ['kritis', 'fakta', 'objektif', 'analisis', 'menganalisis', 'kebenaran', 'ilmiah', 'data', 'rasional', 'solusi', 'konstruktif', 'berani', 'telaah', 'logika', 'solutif'],
-	10: ['kesadaran', 'intelektual', 'ilmu', 'ilmu pengetahuan', 'peduli', 'kepedulian', 'bangsa', 'rakyat', 'masyarakat', 'nurani', 'keadilan', 'sosial', 'nasib', 'masa depan'],
-	11: ['kebenaran', 'keadilan', 'sosial', 'moralitas', 'kejujuran', 'masyarakat', 'rakyat', 'idealisme', 'independen', 'independensi', 'kemanusiaan', 'aspirasi', 'nilai luhur'],
-	12: ['pendidikan', 'pengajaran', 'penelitian', 'pengembangan', 'pengabdian', 'masyarakat', 'tridharma', '3 pilar', 'tiga pilar', 'riset', 'pkm'],
-	13: ['belajar', 'tekun', 'ilmu', 'pengetahuan', 'wawasan', 'berbagi', 'berdiskusi', 'mentoring', 'akademik', 'mengajar', 'tutor', 'kapasitas', 'literasi'],
-	14: ['penelitian', 'pengembangan', 'solusi', 'masalah', 'riset', 'ilmiah', 'masyarakat', 'pengabdian', 'terapan', 'inovatif', 'pemecahan masalah', 'lingkungan'],
-	15: ['seimbang', 'keseimbangan', 'melengkapi', 'utuh', 'terintegrasi', 'sarjana', 'kompetensi', 'karakter', 'holistik', 'sinergi', 'menyeluruh', 'teori dan praktik', 'akademis'],
-	16: ['iron stock', 'pemimpin', 'masa depan', 'penerus', 'generasi', 'kader', 'estafet', 'calon pemimpin', 'regenerasi', 'aset', 'pelanjut'],
-	17: ['guardian of value', 'penjaga nilai', 'penjaga', 'nilai', 'moral', 'moralitas', 'kebenaran', 'etika', 'luhur', 'norma', 'kesusilaan', 'teladan', 'benteng moral'],
-	18: ['social control', 'kontrol sosial', 'pengawas', 'mengawasi', 'kebijakan', 'keadilan', 'aturan', 'kampus', 'pemerintah', 'masyarakat', 'koreksi', 'advokasi'],
-	19: ['agent of change', 'agen perubahan', 'inovasi', 'inovatif', 'gagasan', 'ide', 'perubahan', 'transformasi', 'penggerak', 'kemajuan', 'pembaruan', 'solusi'],
-	20: ['wadah', 'potensi', 'minat', 'bakat', 'kepemimpinan', 'leadership', 'kerja sama', 'teamwork', 'belajar', 'pembelajaran', 'organisasi', 'soft skill', 'relasi', 'kontribusi'],
-	21: ['giliran', 'antre', 'santun', 'sopan', 'etika', 'forum', 'sidang', 'mendengarkan', 'menyimak', 'argumen', 'argumentasi', 'rasional', 'tidak memotong', 'menghargai', 'objektif'],
-	22: ['komunikasi', 'mengabari', 'menginfokan', 'proaktif', 'deadline', 'tenggat', 'batas waktu', 'koordinasi', 'solusi', 'kendala', 'masalah', 'jujur', 'bantuan', 'ketua'],
-	23: ['mengingatkan', 'menegur', 'pribadi', 'jujur', 'memperbaiki', 'koreksi', 'revisi', 'laporan', 'lpj', 'konstruktif', 'membantu', 'transparan', 'akuntabel'],
-	24: ['musyawarah', 'mufakat', 'diskusi', 'dialog', 'bersama', 'terbuka', 'kekeluargaan', 'kepentingan bersama', 'ego', 'tidak egois', 'kolektif kolegial', 'titik temu'],
-	25: ['inisiatif', 'sukarela', 'membantu', 'mendampingi', 'mengarahkan', 'peduli', 'empati', 'solidaritas', 'kader baru', 'anggota baru', 'merangkul', 'alur kerja'],
-	26: ['data', 'fakta', 'bukti', 'valid', 'kajian', 'telaah', 'ilmiah', 'santun', 'etika', 'solusi', 'dialog', 'aspirasi', 'kritik', 'konstruktif', 'objektif', 'rekomendasi'],
-	27: ['penelitian', 'riset', 'pengembangan', 'pengabdian', 'masyarakat', 'pkm', 'terpadu', 'keterpaduan', 'integrasi', 'solusi', 'ilmiah', 'terapan', 'tridharma'],
-	28: ['musyawarah', 'mufakat', 'menerima', 'menghormati', 'kolektif', 'kolegial', 'komitmen', 'bersama', 'legawa', 'sportif', 'kedewasaan', 'etika forum', 'loyalitas'],
-	29: ['pembelajaran', 'proses', 'belajar', 'tanggung jawab', 'sertifikat', 'bukan sekadar sertifikat', 'bukan cuma sertifikat', 'kontribusi', 'dedikasi', 'kerja sama', 'pengembangan diri'],
-	30: ['kontribusi', 'aktif', 'minat', 'keahlian', 'etika', 'moral', 'integritas', 'tanggung jawab', 'amanah', 'kerja sama', 'kolaborasi', 'hima fst', 'hima', 'ut bandung', 'kemajuan', 'manfaat']
-};
-
-export function evaluateEssayItem(questionNumber: number, studentText: string | null): { isCorrect: boolean; points: number } {
-	if (!studentText || typeof studentText !== 'string') {
-		return { isCorrect: false, points: 0 };
+export function evaluateQuestionAnswer(
+	questionNumber: number,
+	studentAnswer: string | null | undefined
+): { isCorrect: boolean; normalizedChoice: 'A' | 'B' | 'C' | 'D' | string | null; points: number } {
+	if (!studentAnswer || typeof studentAnswer !== 'string') {
+		return { isCorrect: false, normalizedChoice: null, points: 0 };
 	}
 
-	const trimmed = studentText.trim();
-	if (trimmed.length < 3) {
-		return { isCorrect: false, points: 0 };
+	const q = OFFICIAL_30_QUESTIONS.find((item) => item.questionNumber === questionNumber);
+	if (!q) {
+		return { isCorrect: false, normalizedChoice: studentAnswer.trim(), points: 0 };
 	}
 
-	const normalized = trimmed.toLowerCase();
-	const keywords = ESSAY_KEYWORDS[questionNumber] || [];
+	const raw = studentAnswer.trim();
+	if (!raw) {
+		return { isCorrect: false, normalizedChoice: null, points: 0 };
+	}
+
+	// Clean wrappers e.g. "A.", "(A)", "[A]", "A)", "pilihan A", "opsi A", "jawaban A"
+	let cleaned = raw.replace(/^[\s\(\[\{]+|[\s\)\]\}]+$/g, '').trim();
+	cleaned = cleaned.replace(/^(pilihan|opsi|jawaban|option)\s+/i, '').trim();
+
+	const upper = cleaned.toUpperCase();
 	const weight = 100 / 30; // ~3.333 poin per butir
 
-	// Hitung kecocokan kata kunci unik
-	let matchedKeywords: string[] = [];
-	for (const kw of keywords) {
-		if (normalized.includes(kw.toLowerCase())) {
-			matchedKeywords.push(kw);
-		}
+	// 1. Direct letter check (A, B, C, D)
+	if (['A', 'B', 'C', 'D'].includes(upper)) {
+		const isCorrect = upper === q.correctAnswer;
+		return { isCorrect, normalizedChoice: upper as any, points: isCorrect ? weight : 0 };
 	}
 
-	const matchCount = matchedKeywords.length;
-	const charLen = normalized.length;
-
-	// 1. Kategori Sempurna / Mendekati Inti Secara Utuh (100% Poin - 3.33 Poin)
-	// Memuat 2+ kata kunci konsep penting ATAU 1 kata kunci penting dengan penjelasan berbobot (>= 20 karakter)
-	if (matchCount >= 2 || (matchCount >= 1 && charLen >= 20)) {
-		return { isCorrect: true, points: Math.round(weight * 100) / 100 };
+	// 1b. Check starting with A., A), B., B), C., C), D., D)
+	const prefixMatch = cleaned.match(/^([a-dA-D])[\.\)\:\-]/);
+	if (prefixMatch) {
+		const letter = prefixMatch[1].toUpperCase() as 'A' | 'B' | 'C' | 'D';
+		const isCorrect = letter === q.correctAnswer;
+		return { isCorrect, normalizedChoice: letter, points: isCorrect ? weight : 0 };
 	}
 
-	// 2. Kategori Mendekati Inti / Baik Sekali (85% Poin - ~2.83 Poin)
-	// Memuat 1 kata kunci esensial dengan penjelasan ringkas (>= 8 karakter)
-	if (matchCount >= 1 && charLen >= 8) {
-		return { isCorrect: true, points: Math.round(weight * 0.85 * 100) / 100 };
+	// 2. Full option text matching
+	const norm = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+	const normA = q.optionA.toLowerCase().replace(/\s+/g, ' ').trim();
+	const normB = q.optionB.toLowerCase().replace(/\s+/g, ' ').trim();
+	const normC = q.optionC.toLowerCase().replace(/\s+/g, ' ').trim();
+	const normD = q.optionD.toLowerCase().replace(/\s+/g, ' ').trim();
+
+	if (norm === normA || norm.includes(normA) || normA.includes(norm)) {
+		const isCorrect = q.correctAnswer === 'A';
+		return { isCorrect, normalizedChoice: 'A', points: isCorrect ? weight : 0 };
+	}
+	if (norm === normB || norm.includes(normB) || normB.includes(norm)) {
+		const isCorrect = q.correctAnswer === 'B';
+		return { isCorrect, normalizedChoice: 'B', points: isCorrect ? weight : 0 };
+	}
+	if (norm === normC || norm.includes(normC) || normC.includes(norm)) {
+		const isCorrect = q.correctAnswer === 'C';
+		return { isCorrect, normalizedChoice: 'C', points: isCorrect ? weight : 0 };
+	}
+	if (norm === normD || norm.includes(normD) || normD.includes(norm)) {
+		const isCorrect = q.correctAnswer === 'D';
+		return { isCorrect, normalizedChoice: 'D', points: isCorrect ? weight : 0 };
 	}
 
-	// 3. Kategori Cukup Mendekati (70% Poin - ~2.33 Poin)
-	// Menyebutkan kata kunci dasar
-	if (matchCount >= 1) {
-		return { isCorrect: true, points: Math.round(weight * 0.70 * 100) / 100 };
-	}
-
-	// 4. Kategori Relevan / Parsial Terkait Organisasi/Kaderisasi (40% Poin - ~1.33 Poin)
-	const generalContextWords = ['mahasiswa', 'organisasi', 'hima', 'tugas', 'tujuan', 'baik', 'kegiatan', 'anggota', 'pengurus', 'masyarakat', 'kampus'];
-	const hasGeneralContext = generalContextWords.some((w) => normalized.includes(w));
-	if (hasGeneralContext && charLen >= 15) {
-		return { isCorrect: true, points: Math.round(weight * 0.40 * 100) / 100 };
-	}
-
-	// 5. Tidak Relevan / Asal-asalan (0 Poin)
-	return { isCorrect: false, points: 0 };
+	return { isCorrect: false, normalizedChoice: raw, points: 0 };
 }
 
+// Backward-compatibility alias
+export const evaluateEssayItem = (qNum: number, text: string | null) => evaluateQuestionAnswer(qNum, text);
+
 /**
- * 8. SUBMIT QUIZ ATTEMPT (ESSAI OTOMATIS DINILAI)
+ * 8. SUBMIT QUIZ ATTEMPT (PILIHAN GANDA 30 SOAL OTOMATIS DINILAI)
  */
 export async function submitQuizAttempt(data: {
 	attemptId?: string;
@@ -996,16 +989,18 @@ export async function submitQuizAttempt(data: {
 
 	let answeredCount = 0;
 	let correctCount = 0;
-	let totalRawPoints = 0;
 
 	const answersBreakdown = OFFICIAL_30_QUESTIONS.map((q) => {
-		const rawAns = data.answers[q.id] ?? data.answers[q.questionNumber.toString()] ?? data.answers[`num_${q.questionNumber}`] ?? null;
+		const rawAns =
+			data.answers[q.id] ??
+			data.answers[q.questionNumber.toString()] ??
+			data.answers[`num_${q.questionNumber}`] ??
+			null;
 		const studentChoice = typeof rawAns === 'string' && rawAns.trim() !== '' ? rawAns.trim() : null;
-		
-		const evaluation = evaluateEssayItem(q.questionNumber, studentChoice);
+
+		const evaluation = evaluateQuestionAnswer(q.questionNumber, studentChoice);
 		if (studentChoice !== null) {
 			answeredCount++;
-			totalRawPoints += evaluation.points;
 			if (evaluation.isCorrect) correctCount++;
 		}
 
@@ -1018,7 +1013,7 @@ export async function submitQuizAttempt(data: {
 			optionB: q.optionB,
 			optionC: q.optionC,
 			optionD: q.optionD,
-			studentAnswer: studentChoice,
+			studentAnswer: evaluation.normalizedChoice || studentChoice,
 			correctAnswer: q.correctAnswer,
 			isCorrect: evaluation.isCorrect,
 			explanation: q.explanation
@@ -1027,7 +1022,7 @@ export async function submitQuizAttempt(data: {
 
 	const totalQuestions = OFFICIAL_30_QUESTIONS.length;
 	const wrongCount = totalQuestions - correctCount;
-	const computedScore = Math.min(100, Math.round(totalRawPoints * 10) / 10);
+	const computedScore = Math.min(100, Math.round((correctCount / totalQuestions) * 100));
 	const score: number = computedScore;
 
 	let attemptId = data.attemptId || 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
@@ -1110,12 +1105,14 @@ export async function submitQuizAttempt(data: {
 								},
 								update: {
 									selectedAnswer: item.studentAnswer || '',
+									isCorrect: item.isCorrect,
 									answeredAt: now
 								},
 								create: {
 									attemptId,
 									questionId: realQId,
 									selectedAnswer: item.studentAnswer || '',
+									isCorrect: item.isCorrect,
 									answeredAt: now
 								}
 							});
@@ -1136,6 +1133,11 @@ export async function submitQuizAttempt(data: {
 						totalQuestions
 					}
 				});
+			}
+		} catch (prismaErr) {
+			console.warn('Prisma error during submit:', prismaErr);
+		}
+	}
 			}
 		} catch (prismaErr) {
 			console.warn('Prisma error during submit:', prismaErr);

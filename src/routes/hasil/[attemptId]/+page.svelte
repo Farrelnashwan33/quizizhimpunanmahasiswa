@@ -57,7 +57,7 @@
 </script>
 
 <svelte:head>
-	<title>Hasil Quiz Kaderisasi I (Essai) - {student?.fullName || 'Peserta'}</title>
+	<title>Hasil Evaluasi Quiz - {student?.fullName || 'Peserta'}</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -81,7 +81,7 @@
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
 					<div class="flex items-center gap-2 mb-2">
-						<Badge variant="emerald" size="sm">Laporan Evaluasi Quiz Essai</Badge>
+						<Badge variant="emerald" size="sm">Laporan Hasil Evaluasi Quiz</Badge>
 						<span class="text-xs text-emerald-100 font-semibold">{quiz.title}</span>
 					</div>
 					<h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">{student?.fullName}</h1>
@@ -195,10 +195,10 @@
 						<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
 							{#if isCorrect}
 								<Check class="w-4 h-4 stroke-[3]" />
-								<span>SESUAI DENGAN MATERI</span>
+								<span>JAWABAN SESUAI (BENAR)</span>
 							{:else if isAnswered}
 								<X class="w-4 h-4 stroke-[3]" />
-								<span>PERLU EVALUASI</span>
+								<span>PERLU EVALUASI (SALAH)</span>
 							{:else}
 								<X class="w-4 h-4 stroke-[3]" />
 								<span>TIDAK DIJAWAB</span>
@@ -211,21 +211,26 @@
 						{q?.questionText}
 					</p>
 
-					<!-- Student essay response -->
-					<div class="p-3.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 mb-3">
-						<p class="font-bold text-slate-600 mb-1 flex items-center gap-1.5">
-							<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-							<span>Jawaban Essai Anda:</span>
-						</p>
-						<p class="whitespace-pre-line leading-relaxed {isAnswered ? 'text-slate-800' : 'italic text-slate-400'}">
-							{studentText || '(Tidak ada jawaban ditulis)'}
-						</p>
-					</div>
+					<!-- Options preview if present -->
+					{#if q?.optionA || q?.optionB || q?.optionC || q?.optionD}
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3">
+							{#each [{ key: 'A', text: q.optionA }, { key: 'B', text: q.optionB }, { key: 'C', text: q.optionC }, { key: 'D', text: q.optionD }] as opt}
+								{@const isUserPick = studentText === opt.key}
+								{@const isCorrectKey = q.correctAnswer === opt.key}
+								<div class="p-2.5 rounded-xl border flex items-start gap-2 {isCorrectKey ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950 font-medium' : isUserPick ? 'bg-rose-100/70 border-rose-300 text-rose-950 font-medium' : 'bg-white border-slate-200 text-slate-700'}">
+									<span class="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 {isCorrectKey ? 'bg-emerald-600 text-white' : isUserPick ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'}">
+										{opt.key}
+									</span>
+									<span class="pt-0.5 leading-snug">{opt.text}</span>
+								</div>
+							{/each}
+						</div>
+					{/if}
 
-					<!-- Official answer key guideline & Explanation -->
+					<!-- Official answer key & Explanation -->
 					{#if q?.correctAnswer}
 						<div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs text-emerald-950 mb-2">
-							<strong class="text-emerald-900">Pedoman Jawaban:</strong> {q.correctAnswer}
+							<strong class="text-emerald-900">Kunci Jawaban Resmi:</strong> Opsi <strong>{q.correctAnswer}</strong>
 						</div>
 					{/if}
 

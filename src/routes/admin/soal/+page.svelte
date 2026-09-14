@@ -18,7 +18,8 @@
 		CheckCircle2,
 		AlertCircle,
 		PenLine,
-		ShieldCheck
+		ShieldCheck,
+		KeyRound
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -40,7 +41,11 @@
 	let editNumber = $state(1);
 	let editSection = $state('Nilai dan Karakter Dasar');
 	let editText = $state('');
-	let editCorrect = $state('');
+	let editOptionA = $state('');
+	let editOptionB = $state('');
+	let editOptionC = $state('');
+	let editOptionD = $state('');
+	let editCorrect = $state('A');
 	let editExplanation = $state('');
 
 	function openEditModal(q: any) {
@@ -49,7 +54,11 @@
 		editNumber = q.questionNumber;
 		editSection = q.section;
 		editText = q.questionText;
-		editCorrect = q.correctAnswer || '';
+		editOptionA = q.optionA || '';
+		editOptionB = q.optionB || '';
+		editOptionC = q.optionC || '';
+		editOptionD = q.optionD || '';
+		editCorrect = q.correctAnswer || 'A';
 		editExplanation = q.explanation || '';
 		editModalOpen = true;
 	}
@@ -69,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>Kelola Soal Quiz Essai (CRUD) - Admin HIMA FST UT Bandung</title>
+	<title>Kelola Bank Soal Pilihan Ganda (CRUD) - Admin HIMA FST UT Bandung</title>
 </svelte:head>
 
 <div class="space-y-6">
@@ -77,21 +86,21 @@
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
 		<div>
 			<div class="flex items-center gap-2 mb-1">
-				<Badge variant="emerald" size="sm">Bank Soal Essai</Badge>
+				<Badge variant="emerald" size="sm">Bank Soal Pilihan Ganda</Badge>
 				<span class="text-xs text-slate-400">Total: {questions.length} Butir Soal</span>
 			</div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-				Manajemen Soal Quiz Essai Kaderisasi
+				Manajemen Soal Quiz Kaderisasi
 			</h1>
 			<p class="text-xs sm:text-sm text-slate-400 mt-1">
-				Tambah, perbarui pertanyaan essai, pedoman jawaban resmi, atau pembahasan materi.
+				Kelola 30 butir pertanyaan, opsi A/B/C/D, kunci jawaban resmi, dan pembahasan materi.
 			</p>
 		</div>
 
 		<div class="flex items-center gap-3">
 			<Button variant="primary" size="md" onclick={() => createModalOpen = true}>
 				<Plus class="w-4 h-4 mr-2" />
-				<span>Tambah Soal Essai</span>
+				<span>Tambah Soal Baru</span>
 			</Button>
 		</div>
 	</div>
@@ -129,7 +138,7 @@
 							</span>
 							<div>
 								<span class="text-xs font-bold text-emerald-400">{q.section}</span>
-								<span class="text-xs text-slate-500 ml-2">• Soal Essai</span>
+								<span class="text-xs text-slate-500 ml-2">• Pilihan Ganda</span>
 							</div>
 						</div>
 
@@ -149,13 +158,26 @@
 						{q.questionText}
 					</p>
 
-					<!-- Essay Rubric Guideline -->
-					<div class="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs">
-						<div class="flex items-center gap-1.5 text-emerald-400 font-bold mb-1">
-							<ShieldCheck class="w-3.5 h-3.5" />
-							<span>Pedoman Kunci Jawaban Essai:</span>
+					<!-- Options Grid -->
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+						<div class="p-3 rounded-xl border {q.correctAnswer === 'A' ? 'bg-emerald-950/70 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-850 border-slate-800 text-slate-300'}">
+							<span class="font-bold mr-1">A.</span> {q.optionA}
 						</div>
-						<p class="text-emerald-200 leading-relaxed font-medium">{q.correctAnswer}</p>
+						<div class="p-3 rounded-xl border {q.correctAnswer === 'B' ? 'bg-emerald-950/70 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-850 border-slate-800 text-slate-300'}">
+							<span class="font-bold mr-1">B.</span> {q.optionB}
+						</div>
+						<div class="p-3 rounded-xl border {q.correctAnswer === 'C' ? 'bg-emerald-950/70 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-850 border-slate-800 text-slate-300'}">
+							<span class="font-bold mr-1">C.</span> {q.optionC}
+						</div>
+						<div class="p-3 rounded-xl border {q.correctAnswer === 'D' ? 'bg-emerald-950/70 border-emerald-600 text-emerald-300 font-bold' : 'bg-slate-850 border-slate-800 text-slate-300'}">
+							<span class="font-bold mr-1">D.</span> {q.optionD}
+						</div>
+					</div>
+
+					<!-- Official Answer Key Badge -->
+					<div class="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-800/60 text-xs text-emerald-300">
+						<KeyRound class="w-4 h-4 text-emerald-400 shrink-0" />
+						<span>Kunci Jawaban Resmi: <strong>Opsi {q.correctAnswer}</strong></span>
 					</div>
 
 					<!-- Explanation -->
@@ -175,7 +197,7 @@
 </div>
 
 <!-- Modal Tambah Soal Baru -->
-<Modal bind:open={createModalOpen} title="Tambah Soal Essai Baru" maxWidth="2xl">
+<Modal bind:open={createModalOpen} title="Tambah Soal Pilihan Ganda Baru" maxWidth="2xl">
 	<form
 		action="?/create"
 		method="POST"
@@ -185,7 +207,7 @@
 				loadingAction = false;
 				if (result.type === 'success') {
 					createModalOpen = false;
-					toasts.success('Soal essai berhasil ditambahkan.');
+					toasts.success('Soal pilihan ganda berhasil ditambahkan.');
 				} else if (result.type === 'failure') {
 					toasts.error((result.data as any)?.error || 'Gagal menambahkan soal.');
 				}
@@ -228,27 +250,77 @@
 		</div>
 
 		<div>
-			<label for="new_questionText" class="block font-bold text-slate-700 mb-1">Teks Pertanyaan Essai *</label>
+			<label for="new_questionText" class="block font-bold text-slate-700 mb-1">Teks Pertanyaan *</label>
 			<textarea
 				id="new_questionText"
 				name="questionText"
 				rows="3"
 				required
-				placeholder="Tuliskan butir soal essai secara jelas..."
+				placeholder="Tuliskan butir pertanyaan secara jelas..."
 				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
 			></textarea>
 		</div>
 
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			<div>
+				<label for="new_optionA" class="block font-bold text-slate-700 mb-1">Opsi A *</label>
+				<input
+					type="text"
+					id="new_optionA"
+					name="optionA"
+					required
+					placeholder="Teks Opsi A"
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+
+			<div>
+				<label for="new_optionB" class="block font-bold text-slate-700 mb-1">Opsi B *</label>
+				<input
+					type="text"
+					id="new_optionB"
+					name="optionB"
+					required
+					placeholder="Teks Opsi B"
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+
+			<div>
+				<label for="new_optionC" class="block font-bold text-slate-700 mb-1">Opsi C *</label>
+				<input
+					type="text"
+					id="new_optionC"
+					name="optionC"
+					required
+					placeholder="Teks Opsi C"
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+
+			<div>
+				<label for="new_optionD" class="block font-bold text-slate-700 mb-1">Opsi D *</label>
+				<input
+					type="text"
+					id="new_optionD"
+					name="optionD"
+					required
+					placeholder="Teks Opsi D"
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+		</div>
+
 		<div>
-			<label for="new_correctAnswer" class="block font-bold text-slate-700 mb-1">Pedoman Kunci Jawaban Essai *</label>
-			<textarea
-				id="new_correctAnswer"
-				name="correctAnswer"
-				rows="3"
-				required
-				placeholder="Tuliskan pedoman jawaban resmi atau poin-poin yang harus ada pada jawaban..."
-				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
-			></textarea>
+			<label class="block font-bold text-slate-700 mb-1">Kunci Jawaban Benar *</label>
+			<div class="grid grid-cols-4 gap-2">
+				{#each ['A', 'B', 'C', 'D'] as opt}
+					<label class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 font-bold">
+						<input type="radio" name="correctAnswer" value={opt} checked={opt === 'A'} class="accent-emerald-600" />
+						<span>Opsi {opt}</span>
+					</label>
+				{/each}
+			</div>
 		</div>
 
 		<div>
@@ -257,7 +329,7 @@
 				id="new_explanation"
 				name="explanation"
 				rows="2"
-				placeholder="Penjelasan latar belakang atau materi rujukan..."
+				placeholder="Penjelasan rujukan materi..."
 				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
 			></textarea>
 		</div>
@@ -266,14 +338,14 @@
 			<Button type="button" variant="outline" size="sm" onclick={() => createModalOpen = false}>Batal</Button>
 			<Button type="submit" variant="primary" size="sm" loading={loadingAction}>
 				<Plus class="w-4 h-4 mr-1.5" />
-				<span>Simpan Soal Essai</span>
+				<span>Simpan Soal</span>
 			</Button>
 		</div>
 	</form>
 </Modal>
 
 <!-- Modal Edit Soal -->
-<Modal bind:open={editModalOpen} title="Edit Soal Essai #{editNumber}" maxWidth="2xl">
+<Modal bind:open={editModalOpen} title="Edit Soal Pilihan Ganda #{editNumber}" maxWidth="2xl">
 	<form
 		action="?/update"
 		method="POST"
@@ -283,7 +355,7 @@
 				loadingAction = false;
 				if (result.type === 'success') {
 					editModalOpen = false;
-					toasts.success('Soal essai berhasil diperbarui.');
+					toasts.success('Soal pilihan ganda berhasil diperbarui.');
 				} else if (result.type === 'failure') {
 					toasts.error((result.data as any)?.error || 'Gagal memperbarui soal.');
 				}
@@ -327,7 +399,7 @@
 		</div>
 
 		<div>
-			<label for="edit_questionText" class="block font-bold text-slate-700 mb-1">Teks Pertanyaan Essai *</label>
+			<label for="edit_questionText" class="block font-bold text-slate-700 mb-1">Teks Pertanyaan *</label>
 			<textarea
 				id="edit_questionText"
 				name="questionText"
@@ -338,17 +410,66 @@
 			></textarea>
 		</div>
 
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			<div>
+				<label for="edit_optionA" class="block font-bold text-slate-700 mb-1">Opsi A *</label>
+				<input
+					type="text"
+					id="edit_optionA"
+					name="optionA"
+					required
+					bind:value={editOptionA}
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+
+			<div>
+				<label for="edit_optionB" class="block font-bold text-slate-700 mb-1">Opsi B *</label>
+				<input
+					type="text"
+					id="edit_optionB"
+					name="optionB"
+					required
+					bind:value={editOptionB}
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+
+			<div>
+				<label for="edit_optionC" class="block font-bold text-slate-700 mb-1">Opsi C *</label>
+				<input
+					type="text"
+					id="edit_optionC"
+					name="optionC"
+					required
+					bind:value={editOptionC}
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+
+			<div>
+				<label for="edit_optionD" class="block font-bold text-slate-700 mb-1">Opsi D *</label>
+				<input
+					type="text"
+					id="edit_optionD"
+					name="optionD"
+					required
+					bind:value={editOptionD}
+					class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs"
+				/>
+			</div>
+		</div>
+
 		<div>
-			<label for="edit_correctAnswer" class="block font-bold text-slate-700 mb-1">Pedoman Kunci Jawaban Essai *</label>
-			<textarea
-				id="edit_correctAnswer"
-				name="correctAnswer"
-				rows="3"
-				required
-				bind:value={editCorrect}
-				placeholder="Pedoman kunci jawaban resmi essai..."
-				class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 outline-none focus:border-emerald-500 text-slate-900 text-xs leading-relaxed"
-			></textarea>
+			<label class="block font-bold text-slate-700 mb-1">Kunci Jawaban Benar *</label>
+			<div class="grid grid-cols-4 gap-2">
+				{#each ['A', 'B', 'C', 'D'] as opt}
+					<label class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 font-bold">
+						<input type="radio" name="correctAnswer" value={opt} bind:group={editCorrect} class="accent-emerald-600" />
+						<span>Opsi {opt}</span>
+					</label>
+				{/each}
+			</div>
 		</div>
 
 		<div>
@@ -366,7 +487,7 @@
 			<Button type="button" variant="outline" size="sm" onclick={() => editModalOpen = false}>Batal</Button>
 			<Button type="submit" variant="primary" size="sm" loading={loadingAction}>
 				<Check class="w-4 h-4 mr-1.5" />
-				<span>Perbarui Soal Essai</span>
+				<span>Perbarui Soal</span>
 			</Button>
 		</div>
 	</form>
@@ -375,7 +496,7 @@
 <!-- Delete Dialog Confirmation -->
 <ConfirmDialog
 	bind:open={deleteDialogOpen}
-	title="Hapus Butir Soal Essai?"
+	title="Hapus Butir Soal?"
 	message={`Apakah Anda yakin ingin menghapus soal nomor #${selectedQuestion?.questionNumber}? Tindakan ini tidak dapat dibatalkan.`}
 	confirmText="Ya, Hapus Soal"
 	cancelText="Batal"

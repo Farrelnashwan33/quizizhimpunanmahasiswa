@@ -18,6 +18,10 @@ export const load: PageServerLoad = async () => {
 				questionNumber: true,
 				section: true,
 				questionText: true,
+				optionA: true,
+				optionB: true,
+				optionC: true,
+				optionD: true,
 				correctAnswer: true,
 				explanation: true
 			}
@@ -40,6 +44,10 @@ export const load: PageServerLoad = async () => {
 			questionNumber: q.questionNumber,
 			section: q.section,
 			questionText: q.questionText,
+			optionA: q.optionA,
+			optionB: q.optionB,
+			optionC: q.optionC,
+			optionD: q.optionD,
 			correctAnswer: q.correctAnswer,
 			explanation: q.explanation || ''
 		}))
@@ -50,17 +58,17 @@ export const actions: Actions = {
 	updateKey: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim();
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim()?.toUpperCase();
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
 
-		if (!id || !correctAnswer) {
-			return fail(400, { error: 'Pedoman kunci jawaban essai tidak boleh kosong.' });
+		if (!id || !correctAnswer || !['A', 'B', 'C', 'D'].includes(correctAnswer)) {
+			return fail(400, { error: 'Kunci jawaban harus berupa opsi A, B, C, atau D.' });
 		}
 
 		// Update in-memory fallback
 		const target = OFFICIAL_30_QUESTIONS.find((q) => q.id === id || String(q.questionNumber) === id);
 		if (target) {
-			target.correctAnswer = correctAnswer;
+			target.correctAnswer = correctAnswer as any;
 			if (explanation !== null) target.explanation = explanation;
 		}
 
@@ -94,6 +102,6 @@ export const actions: Actions = {
 			}
 		}
 
-		return { success: true, message: 'Pedoman kunci jawaban essai dan pembahasan berhasil disimpan.' };
+		return { success: true, message: 'Kunci jawaban dan pembahasan berhasil diperbarui.' };
 	}
 };

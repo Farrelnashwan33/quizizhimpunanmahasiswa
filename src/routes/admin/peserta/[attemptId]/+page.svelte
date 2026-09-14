@@ -22,7 +22,8 @@
 		Save,
 		Sparkles,
 		Award,
-		ShieldCheck
+		ShieldCheck,
+		KeyRound
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -36,36 +37,19 @@
 	let feedbackText = $state<string>('');
 	let isSavingGrade = $state(false);
 
-	// Local grading per question: 1 = full (100/30 ~ 3.33), 0.5 = half, 0 = zero
-	let itemScores = $state<Record<number, number>>({});
-
 	$effect(() => {
 		if (attempt?.score !== null && attempt?.score !== undefined) {
 			manualScore = attempt.score;
 		}
 	});
 
-	function setQuickScore(multiplier: number) {
-		manualScore = Math.round(multiplier * 100);
-	}
-
-	function calculateFromQuestions() {
-		const totalQ = detailedQuestions.length || 30;
-		const weightPerQuestion = 100 / totalQ;
-		let total = 0;
-		for (let i = 1; i <= totalQ; i++) {
-			const sc = itemScores[i] ?? (detailedQuestions[i - 1]?.isCorrect ? 1 : 0);
-			total += sc * weightPerQuestion;
-		}
-		manualScore = Math.round(total * 10) / 10;
-		toasts.info(`Skor dihitung otomatis: ${manualScore}/100`);
-	}
-
+	const correctCount = $derived(detailedQuestions.filter((d: any) => d.isCorrect).length);
+	const wrongCount = $derived(detailedQuestions.length - correctCount);
 	const isPassed = $derived(manualScore >= 65);
 </script>
 
 <svelte:head>
-	<title>Penilaian Essai: {student?.fullName} - Admin HIMA FST</title>
+	<title>Lembar Jawaban: {student?.fullName} - Admin HIMA FST</title>
 </svelte:head>
 
 <div class="space-y-6 max-w-5xl mx-auto pb-12">
@@ -87,7 +71,7 @@
 		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
 			<div>
 				<div class="flex items-center gap-2 mb-1.5">
-					<Badge variant="emerald" size="sm">Lembar Penilaian Essai</Badge>
+					<Badge variant="emerald" size="sm">Lembar Jawaban Peserta</Badge>
 					<span class="text-xs text-slate-400 font-medium">{quiz.title}</span>
 				</div>
 				<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
@@ -121,21 +105,21 @@
 
 		<!-- Mini Stats Grid -->
 		<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-			<div class="p-3.5 rounded-xl bg-slate-800/80 border border-slate-750">
-				<p class="text-slate-400 font-medium">Total Soal</p>
-				<p class="text-lg font-bold text-white mt-1">30 Soal Essai</p>
+			<div class="p-3.5 rounded-xl bg-slate-850 border border-slate-750">
+				<p class="text-slate-400 font-medium">Jawaban Sesuai</p>
+				<p class="text-lg font-bold text-emerald-400 mt-1">{attempt.correctCount ?? correctCount} / 30 Butir</p>
 			</div>
-			<div class="p-3.5 rounded-xl bg-slate-800/80 border border-slate-750">
-				<p class="text-slate-400 font-medium">Status Pengiriman</p>
-				<p class="text-sm font-bold text-emerald-400 mt-1">Telah Diserahkan</p>
+			<div class="p-3.5 rounded-xl bg-slate-850 border border-slate-750">
+				<p class="text-slate-400 font-medium">Perlu Evaluasi</p>
+				<p class="text-lg font-bold text-rose-400 mt-1">{attempt.wrongCount ?? wrongCount} / 30 Butir</p>
 			</div>
-			<div class="p-3.5 rounded-xl bg-slate-800/80 border border-slate-750">
+			<div class="p-3.5 rounded-xl bg-slate-850 border border-slate-750">
 				<p class="text-slate-400 font-medium">Waktu Mulai</p>
 				<p class="text-xs font-semibold text-slate-200 mt-1">
 					{new Date(attempt.startedAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
 				</p>
 			</div>
-			<div class="p-3.5 rounded-xl bg-slate-800/80 border border-slate-750">
+			<div class="p-3.5 rounded-xl bg-slate-850 border border-slate-750">
 				<p class="text-slate-400 font-medium">Waktu Selesai</p>
 				<p class="text-xs font-semibold text-slate-200 mt-1">
 					{attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : 'Selesai'}
@@ -144,14 +128,14 @@
 		</div>
 	</div>
 
-	<!-- Admin Grading Form Card -->
+	<!-- Admin Score Adjustment Panel -->
 	<div class="p-6 rounded-3xl bg-slate-900 border border-emerald-900/50 shadow-xl space-y-4">
 		<div class="flex items-center justify-between pb-3 border-b border-slate-800">
 			<div class="flex items-center gap-2">
 				<Award class="w-5 h-5 text-emerald-400" />
-				<h2 class="text-base font-bold text-white">Panel Penilaian Manual Essai Admin</h2>
+				<h2 class="text-base font-bold text-white">Panel Penyesuaian Nilai Admin (Opsional)</h2>
 			</div>
-			<Badge variant="emerald" size="sm">KKM: 65</Badge>
+			<Badge variant="emerald" size="sm">Standar KKM: 65</Badge>
 		</div>
 
 		<form
@@ -162,7 +146,7 @@
 				return async ({ result, update }) => {
 					isSavingGrade = false;
 					if (result.type === 'success') {
-						toasts.success('Penilaian essai berhasil disimpan ke database!');
+						toasts.success('Penilaian berhasil disimpan ke database!');
 					} else {
 						toasts.error('Gagal menyimpan penilaian.');
 					}
@@ -182,77 +166,72 @@
 						name="score"
 						min="0"
 						max="100"
-						step="0.5"
+						step="1"
 						required
 						bind:value={manualScore}
-						class="w-full p-3 bg-slate-850 border-2 border-emerald-600 focus:border-emerald-400 rounded-xl text-lg font-black font-mono text-emerald-400 outline-none transition-colors"
+						class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white font-mono text-base font-bold focus:border-emerald-500 outline-none"
 					/>
 				</div>
 
 				<div class="sm:col-span-2 space-y-1.5">
 					<label for="feedback-input" class="block text-xs font-bold text-slate-200">
-						Catatan Evaluasi / Feedback Pengurus (Opsional):
+						Catatan / Evaluasi Pembinaan (Opsional):
 					</label>
 					<input
 						id="feedback-input"
 						type="text"
 						name="feedback"
 						bind:value={feedbackText}
-						placeholder="Contoh: Pemahaman konsep Tridharma dan Etika Organisasi sangat mendalam."
-						class="w-full p-3 bg-slate-850 border border-slate-700 focus:border-emerald-500 rounded-xl text-xs text-slate-200 outline-none transition-colors"
+						placeholder="Contoh: Pemahaman materi baik, tingkatkan komitmen waktu..."
+						class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-xs focus:border-emerald-500 outline-none"
 					/>
 				</div>
 			</div>
 
-			<div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-				<div class="flex items-center gap-1.5 text-xs text-slate-400">
-					<span>Template Skor Cepat:</span>
-					<button type="button" onclick={() => setQuickScore(1)} class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold">100</button>
-					<button type="button" onclick={() => setQuickScore(0.85)} class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold">85</button>
-					<button type="button" onclick={() => setQuickScore(0.75)} class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold">75</button>
-					<button type="button" onclick={() => setQuickScore(0.65)} class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold">65 (Pass)</button>
-					<button type="button" onclick={() => setQuickScore(0.5)} class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold">50</button>
-				</div>
-
-				<Button type="submit" variant="primary" size="md" loading={isSavingGrade} class="shadow-lg shadow-emerald-600/20 font-bold">
+			<div class="flex items-center justify-end gap-3 pt-2">
+				<Button type="submit" variant="primary" size="md" loading={isSavingGrade} class="font-bold">
 					<Save class="w-4 h-4 mr-2" />
-					<span>Simpan Penilaian Essai</span>
+					<span>Simpan Penilaian ke Database</span>
 				</Button>
 			</div>
 		</form>
 	</div>
 
-	<!-- 30 Questions Essay Answer Sheet Breakdown -->
+	<!-- 30 Questions Answer Sheet Breakdown -->
 	<div class="space-y-4">
 		<div class="flex items-center justify-between">
 			<h2 class="text-lg font-bold text-white flex items-center gap-2">
 				<FileText class="w-5 h-5 text-emerald-400" />
-				<span>Lembar Perbandingan Jawaban Mahasiswa vs Pedoman Resmi (1–30)</span>
+				<span>Lembar Rincian Jawaban Peserta vs Kunci Resmi (1–30)</span>
 			</h2>
-			<span class="text-xs text-slate-400">30 Butir Soal Essai</span>
+			<span class="text-xs text-slate-400">30 Butir Soal Pilihan Ganda</span>
 		</div>
 
-		{#each detailedQuestions as item, idx}
-			{@const q = item.question}
+		{#each detailedQuestions as item}
+			{@const q = item.question || item}
 			{@const studentAns = item.studentAnswer}
 			{@const isAnswered = studentAns && studentAns.trim() !== ''}
+			{@const isCorrect = item.isCorrect}
 
 			<div class="p-6 rounded-2xl border bg-slate-900 border-slate-800 space-y-4 shadow-md">
 				<!-- Question Header -->
 				<div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-800">
 					<div class="flex items-center gap-2.5">
-						<span class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-							{q.questionNumber}
+						<span class="w-7 h-7 rounded-lg {isCorrect ? 'bg-emerald-600' : 'bg-rose-600'} text-white flex items-center justify-center font-bold text-xs">
+							{item.questionNumber}
 						</span>
 						<span class="text-xs font-bold text-slate-300 bg-slate-800 px-2.5 py-1 rounded-lg">
-							{q.section}
+							{item.section}
 						</span>
 					</div>
 
-					<div class="flex items-center gap-1.5 text-xs font-bold {isAnswered ? 'text-emerald-400' : 'text-slate-500'}">
-						{#if isAnswered}
+					<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-400' : isAnswered ? 'text-rose-400' : 'text-slate-500'}">
+						{#if isCorrect}
 							<Check class="w-4 h-4 stroke-[3]" />
-							<span>DIJAWAB ({studentAns.length} Karakter)</span>
+							<span>JAWABAN SESUAI (BENAR)</span>
+						{:else if isAnswered}
+							<X class="w-4 h-4 stroke-[3]" />
+							<span>PERLU EVALUASI (SALAH)</span>
 						{:else}
 							<X class="w-4 h-4 stroke-[3]" />
 							<span>TIDAK DIJAWAB</span>
@@ -262,51 +241,41 @@
 
 				<!-- Question Text -->
 				<div>
-					<p class="text-xs uppercase font-bold text-slate-400 mb-1">Pertanyaan #{q.questionNumber}:</p>
+					<p class="text-xs uppercase font-bold text-slate-400 mb-1">Pertanyaan #{item.questionNumber}:</p>
 					<p class="text-sm font-semibold text-slate-100 whitespace-pre-line leading-relaxed">
-						{q.questionText}
+						{item.questionText}
 					</p>
 				</div>
 
-				<!-- Side-by-side: Student Essay Answer vs Official Guideline -->
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
-					<!-- Student Answer Box -->
-					<div class="p-4 rounded-xl bg-slate-850 border {isAnswered ? 'border-emerald-800/60' : 'border-rose-900/40'} space-y-2">
-						<div class="flex items-center justify-between text-slate-400 font-bold">
-							<span class="flex items-center gap-1.5 text-white">
-								<PenLine class="w-3.5 h-3.5 text-emerald-400" />
-								<span>Jawaban Mahasiswa:</span>
-							</span>
-							{#if isAnswered}
-								<span class="text-emerald-400 text-[11px]">✓ Terisi</span>
-							{:else}
-								<span class="text-rose-400 text-[11px]">Kosong</span>
-							{/if}
-						</div>
-						<p class="whitespace-pre-line leading-relaxed text-sm {isAnswered ? 'text-slate-100' : 'italic text-slate-500'}">
-							{studentAns || '(Mahasiswa tidak menuliskan jawaban)'}
-						</p>
+				<!-- Options Breakdown -->
+				{#if item.optionA || item.optionB || item.optionC || item.optionD}
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+						{#each [{ key: 'A', text: item.optionA }, { key: 'B', text: item.optionB }, { key: 'C', text: item.optionC }, { key: 'D', text: item.optionD }] as opt}
+							{@const isStudentChoice = studentAns === opt.key}
+							{@const isKey = item.correctAnswer === opt.key}
+							<div class="p-3 rounded-xl border flex items-start gap-2.5 {isKey ? 'bg-emerald-950/70 border-emerald-600 text-emerald-300 font-bold' : isStudentChoice ? 'bg-rose-950/60 border-rose-700 text-rose-300 font-semibold' : 'bg-slate-850 border-slate-800 text-slate-400'}">
+								<span class="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 {isKey ? 'bg-emerald-600 text-white' : isStudentChoice ? 'bg-rose-600 text-white' : 'bg-slate-750 text-slate-300'}">
+									{opt.key}
+								</span>
+								<div class="flex-1 leading-relaxed">
+									<span>{opt.text}</span>
+									{#if isStudentChoice && isKey}
+										<span class="block text-[10px] text-emerald-400 font-bold mt-0.5">✓ Pilihan Mahasiswa (Tepat)</span>
+									{:else if isStudentChoice}
+										<span class="block text-[10px] text-rose-400 font-bold mt-0.5">✗ Pilihan Mahasiswa (Salah)</span>
+									{:else if isKey}
+										<span class="block text-[10px] text-emerald-400 font-bold mt-0.5">★ Kunci Jawaban Benar</span>
+									{/if}
+								</div>
+							</div>
+						{/each}
 					</div>
-
-					<!-- Official Key / Guideline Box -->
-					<div class="p-4 rounded-xl bg-emerald-950/40 border border-emerald-700/60 space-y-2">
-						<div class="flex items-center justify-between text-emerald-300 font-bold">
-							<span class="flex items-center gap-1.5">
-								<ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
-								<span>Pedoman Jawaban Resmi Essai:</span>
-							</span>
-							<span class="text-emerald-400 text-[10px] uppercase font-bold tracking-wider">Master Key</span>
-						</div>
-						<p class="whitespace-pre-line leading-relaxed text-sm text-emerald-200 font-medium">
-							{q.correctAnswer}
-						</p>
-					</div>
-				</div>
+				{/if}
 
 				<!-- Explanation -->
-				{#if q.explanation}
+				{#if item.explanation}
 					<div class="p-3 bg-slate-850/80 rounded-xl border border-slate-800 text-xs text-slate-300">
-						<strong class="text-emerald-400">Pembahasan:</strong> {q.explanation}
+						<strong class="text-emerald-400">Pembahasan:</strong> {item.explanation}
 					</div>
 				{/if}
 			</div>

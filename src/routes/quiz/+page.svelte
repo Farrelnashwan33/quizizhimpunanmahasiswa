@@ -253,9 +253,9 @@
 		}
 	}
 
-	function handleAnswerInput(text: string) {
+	function handleSelectOption(optionLetter: string) {
 		if (!currentQuestion || isSubmitting || quizResult) return;
-		answers[currentQuestion.id] = text;
+		answers[currentQuestion.id] = optionLetter;
 
 		try {
 			localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
@@ -273,7 +273,7 @@
 						body: JSON.stringify({
 							attemptId,
 							questionId: currentQuestion.id,
-							selectedAnswer: text
+							selectedAnswer: optionLetter
 						})
 					});
 					autoSaveStatus = 'saved';
@@ -283,7 +283,7 @@
 			} else {
 				autoSaveStatus = 'saved';
 			}
-		}, 600);
+		}, 300);
 	}
 
 	function goToQuestion(idx: number) {
@@ -357,7 +357,7 @@
 					});
 				} catch (e) {}
 
-				toasts.success('Jawaban quiz essai berhasil dikirim!');
+				toasts.success('Jawaban quiz berhasil dikirim!');
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			} else {
 				toasts.error(data.error || 'Gagal mengirim quiz.');
@@ -372,7 +372,7 @@
 </script>
 
 <svelte:head>
-	<title>Quiz Kaderisasi Tingkat I (Essai) - HIMA FST UT Bandung</title>
+	<title>Quiz Kaderisasi Tingkat I - HIMA FST UT Bandung</title>
 </svelte:head>
 
 <div class="min-h-screen bg-slate-50 flex flex-col">
@@ -390,7 +390,7 @@
 						Quiz Kaderisasi HIMA FST UT Bandung
 					</h1>
 					<p class="text-xs sm:text-sm text-slate-600 mt-2">
-						Uji Pemahaman, Bangun Karakter, dan Siap Berkontribusi (Sistem Soal Essai)
+						Uji Pemahaman, Bangun Karakter, dan Siap Berkontribusi (30 Soal Pilihan Ganda)
 					</p>
 				</div>
 
@@ -453,14 +453,14 @@
 
 						<div class="pt-4">
 							<Button type="submit" variant="primary" size="lg" fullWidth loading={isStarting} class="shadow-lg shadow-emerald-600/30 font-bold">
-								<span>Mulai Mengerjakan (30 Soal Essai)</span>
+								<span>Mulai Mengerjakan (30 Soal Pilihan Ganda)</span>
 								<ArrowRight class="w-5 h-5 ml-2" />
 							</Button>
 						</div>
 					</form>
 
 					<div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-						<span>30 Soal Essai</span>
+						<span>30 Soal Pilihan Ganda</span>
 						<span>•</span>
 						<span>Autosave Aktif</span>
 						<span>•</span>
@@ -470,7 +470,7 @@
 			</div>
 		</div>
 
-	<!-- STATE 2: MENGERJAKAN 30 SOAL ESSAI -->
+	<!-- STATE 2: MENGERJAKAN 30 SOAL PILIHAN GANDA -->
 	{:else if !quizResult}
 		<!-- Sticky Quiz Header -->
 		<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 shadow-xs">
@@ -554,7 +554,7 @@
 								</div>
 								<div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
 									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-									<span>Soal Essai</span>
+									<span>Pilihan Ganda</span>
 								</div>
 							</div>
 
@@ -568,36 +568,42 @@
 								</p>
 							</div>
 
-							<!-- Essay Textarea Input -->
-							<div class="space-y-2">
-								<div class="flex items-center justify-between text-xs">
-									<label for="essay-answer" class="font-bold text-slate-700 flex items-center gap-1.5">
-										<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-										<span>Jawaban Essai Mahasiswa:</span>
-									</label>
-									<span class="text-slate-400 font-mono text-[11px]">
-										{currentAnswer.trim().length} Karakter
-									</span>
+							<!-- Multiple Choice Options (A, B, C, D) -->
+							<div class="space-y-3">
+								<p class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+									Pilih Salah Satu Jawaban:
+								</p>
+
+								<div class="grid grid-cols-1 gap-3">
+									{#each [
+										{ key: 'A', text: currentQuestion.optionA },
+										{ key: 'B', text: currentQuestion.optionB },
+										{ key: 'C', text: currentQuestion.optionC },
+										{ key: 'D', text: currentQuestion.optionD }
+									] as opt}
+										{@const isSelected = currentAnswer === opt.key}
+										<button
+											type="button"
+											onclick={() => handleSelectOption(opt.key)}
+											class="w-full text-left p-4 rounded-2xl border-2 transition-all duration-150 flex items-start gap-3.5 cursor-pointer {isSelected ? 'border-emerald-600 bg-emerald-50/80 shadow-sm ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}"
+										>
+											<div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors {isSelected ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
+												{opt.key}
+											</div>
+											<div class="flex-1 pt-1 text-sm sm:text-base {isSelected ? 'font-semibold text-emerald-950' : 'text-slate-800'} leading-relaxed">
+												{opt.text}
+											</div>
+										</button>
+									{/each}
 								</div>
 
-								<div class="relative">
-									<textarea
-										id="essay-answer"
-										rows="7"
-										value={currentAnswer}
-										oninput={(e) => handleAnswerInput((e.target as HTMLTextAreaElement).value)}
-										placeholder="Tuliskan jawaban essai Anda secara jelas, terstruktur, dan lengkap di sini..."
-										class="w-full p-4 rounded-2xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none text-slate-800 text-sm leading-relaxed transition-all placeholder:text-slate-400 bg-white resize-y min-h-[160px]"
-									></textarea>
-								</div>
-
-								<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+								<div class="flex items-center justify-between text-[11px] text-slate-500 pt-2">
 									<span class="flex items-center gap-1 text-emerald-700">
 										<Save class="w-3 h-3 text-emerald-600" />
-										Jawaban otomatis tersimpan saat Anda mengetik atau berpindah nomor.
+										Jawaban otomatis tersimpan saat Anda memilih opsi atau berpindah nomor.
 									</span>
-									<span class="{currentAnswer.trim() ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
-										{currentAnswer.trim() ? '✓ Terisi' : 'Belum diisi'}
+									<span class="{currentAnswer ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
+										{currentAnswer ? `✓ Pilihan: Opsi ${currentAnswer}` : 'Belum dipilih'}
 									</span>
 								</div>
 							</div>
@@ -817,10 +823,10 @@
 								<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
 									{#if isCorrect}
 										<Check class="w-4 h-4 stroke-[3]" />
-										<span>SESUAI DENGAN MATERI</span>
+										<span>JAWABAN SESUAI (BENAR)</span>
 									{:else if isAns}
 										<X class="w-4 h-4 stroke-[3]" />
-										<span>PERLU EVALUASI</span>
+										<span>PERLU EVALUASI (SALAH)</span>
 									{:else}
 										<X class="w-4 h-4 stroke-[3]" />
 										<span>TIDAK DIJAWAB</span>
@@ -832,18 +838,24 @@
 								{item.questionText}
 							</p>
 
-							<div class="p-3.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 mb-3">
-								<p class="font-bold text-slate-600 mb-1 flex items-center gap-1.5">
-									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-									<span>Jawaban Essai Anda:</span>
-								</p>
-								<p class="whitespace-pre-line leading-relaxed {isAns ? 'text-slate-800' : 'italic text-slate-400'}">
-									{item.studentAnswer || '(Tidak ada jawaban ditulis)'}
-								</p>
-							</div>
+							<!-- Options Preview -->
+							{#if item.optionA || item.optionB || item.optionC || item.optionD}
+								<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3">
+									{#each [{ key: 'A', text: item.optionA }, { key: 'B', text: item.optionB }, { key: 'C', text: item.optionC }, { key: 'D', text: item.optionD }] as opt}
+										{@const isUserPick = item.studentAnswer === opt.key}
+										{@const isCorrectKey = item.correctAnswer === opt.key}
+										<div class="p-2.5 rounded-xl border flex items-start gap-2 {isCorrectKey ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950 font-medium' : isUserPick ? 'bg-rose-100/70 border-rose-300 text-rose-950 font-medium' : 'bg-white border-slate-200 text-slate-700'}">
+											<span class="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 {isCorrectKey ? 'bg-emerald-600 text-white' : isUserPick ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'}">
+												{opt.key}
+											</span>
+											<span class="pt-0.5 leading-snug">{opt.text}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
 
 							<div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs text-emerald-950 mb-2">
-								<strong class="text-emerald-900">Pedoman Jawaban:</strong> {item.correctAnswer}
+								<strong class="text-emerald-900">Kunci Jawaban Resmi:</strong> Opsi <strong>{item.correctAnswer}</strong>
 							</div>
 
 							{#if item.explanation}
@@ -860,10 +872,10 @@
 </div>
 
 <!-- Review Modal -->
-<Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal Essai)" maxWidth="xl">
+<Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal)" maxWidth="xl">
 	<div class="space-y-4">
 		<p class="text-xs text-slate-600">
-			Periksa kelengkapan jawaban essai Anda untuk masing-masing butir soal sebelum mengirim kuis.
+			Periksa kelengkapan jawaban pilihan ganda Anda untuk masing-masing butir soal sebelum mengirim kuis.
 		</p>
 
 		<div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs font-semibold">
@@ -882,7 +894,7 @@
 				>
 					<span class="block text-xs font-bold">{idx + 1}</span>
 					<span class="block text-[10px] font-mono mt-0.5 {isAns ? 'font-bold text-emerald-700' : 'text-rose-500'}">
-						{isAns ? 'Isi' : '-'}
+						{isAns ? ans : '-'}
 					</span>
 				</button>
 			{/each}
@@ -911,7 +923,7 @@
 	bind:open={confirmSubmitOpen}
 	title="Kirim Jawaban Quiz Kaderisasi?"
 	message={isAllAnswered
-		? "Seluruh 30 soal essai telah Anda jawab. Apakah Anda yakin ingin mengirim quiz sekarang?"
+		? "Seluruh 30 soal telah Anda jawab. Apakah Anda yakin ingin mengirim quiz sekarang?"
 		: `Perhatian: Anda baru menjawab ${answeredCount} dari 30 soal (${totalQuestions - answeredCount} belum dijawab). Apakah Anda yakin ingin mengirim quiz sekarang?`}
 	confirmText="Ya, Kirim Quiz"
 	cancelText="Periksa Lagi"

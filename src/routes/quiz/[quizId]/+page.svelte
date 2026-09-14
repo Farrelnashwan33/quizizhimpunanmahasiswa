@@ -151,12 +151,12 @@
 	);
 	const isAllAnswered = $derived(answeredCount === totalQuestions);
 
-	// Handle essay answer text input with autosave
-	function handleAnswerInput(text: string) {
+	// Handle multiple-choice option selection with autosave
+	function handleSelectOption(optionLetter: string) {
 		if (!currentQuestion || isSubmitting) return;
 
 		const qId = currentQuestion.id;
-		answers[qId] = text;
+		answers[qId] = optionLetter;
 		savingStatus = 'saving';
 
 		if (saveTimeout) clearTimeout(saveTimeout);
@@ -168,7 +168,7 @@
 					body: JSON.stringify({
 						attemptId: attempt.id,
 						questionId: qId,
-						selectedAnswer: text
+						selectedAnswer: optionLetter
 					})
 				});
 
@@ -180,7 +180,7 @@
 			} catch (err) {
 				savingStatus = 'error';
 			}
-		}, 600);
+		}, 300);
 	}
 
 	function goToQuestion(idx: number) {
@@ -236,7 +236,7 @@
 			const result = await res.json();
 
 			if (result.success) {
-				toasts.success('Quiz essai berhasil dikirim!');
+				toasts.success('Quiz berhasil dikirim!');
 				goto(`/hasil/${attempt.id}`);
 			} else {
 				isSubmitting = false;
@@ -251,7 +251,7 @@
 </script>
 
 <svelte:head>
-	<title>Mengerjakan Soal Essai ({currentIndex + 1}/{totalQuestions}) - HIMA FST UT Bandung</title>
+	<title>Mengerjakan Quiz ({currentIndex + 1}/{totalQuestions}) - HIMA FST UT Bandung</title>
 </svelte:head>
 
 <div class="min-h-screen bg-slate-50/90 flex flex-col">
@@ -266,7 +266,7 @@
 				<div>
 					<div class="flex items-center gap-2">
 						<span class="font-bold text-sm sm:text-base text-slate-900 line-clamp-1">
-							Quiz Kaderisasi Tingkat I (Essai)
+							Quiz Kaderisasi Tingkat I
 						</span>
 						<Badge variant="emerald" size="sm" class="hidden sm:inline-flex">HIMA FST</Badge>
 					</div>
@@ -342,7 +342,7 @@
 
 							<div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
 								<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-								<span>Soal Essai</span>
+								<span>Pilihan Ganda</span>
 							</div>
 						</div>
 
@@ -356,36 +356,42 @@
 							</p>
 						</div>
 
-						<!-- Essay Textarea Input -->
-						<div class="space-y-2">
-							<div class="flex items-center justify-between text-xs">
-								<label for="essay-auth-answer" class="font-bold text-slate-700 flex items-center gap-1.5">
-									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-									<span>Jawaban Essai Anda:</span>
-								</label>
-								<span class="text-slate-400 font-mono text-[11px]">
-									{currentAnswer.trim().length} Karakter
-								</span>
+						<!-- Multiple Choice Options (A, B, C, D) -->
+						<div class="space-y-3">
+							<p class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+								Pilih Salah Satu Jawaban:
+							</p>
+
+							<div class="grid grid-cols-1 gap-3">
+								{#each [
+									{ key: 'A', text: currentQuestion.optionA },
+									{ key: 'B', text: currentQuestion.optionB },
+									{ key: 'C', text: currentQuestion.optionC },
+									{ key: 'D', text: currentQuestion.optionD }
+								] as opt}
+									{@const isSelected = currentAnswer === opt.key}
+									<button
+										type="button"
+										onclick={() => handleSelectOption(opt.key)}
+										class="w-full text-left p-4 rounded-2xl border-2 transition-all duration-150 flex items-start gap-3.5 cursor-pointer {isSelected ? 'border-emerald-600 bg-emerald-50/80 shadow-sm ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}"
+									>
+										<div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors {isSelected ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
+											{opt.key}
+										</div>
+										<div class="flex-1 pt-1 text-sm sm:text-base {isSelected ? 'font-semibold text-emerald-950' : 'text-slate-800'} leading-relaxed">
+											{opt.text}
+										</div>
+									</button>
+								{/each}
 							</div>
 
-							<div class="relative">
-								<textarea
-									id="essay-auth-answer"
-									rows="7"
-									value={currentAnswer}
-									oninput={(e) => handleAnswerInput((e.target as HTMLTextAreaElement).value)}
-									placeholder="Tuliskan jawaban essai Anda secara jelas, terstruktur, dan lengkap di sini..."
-									class="w-full p-4 rounded-2xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none text-slate-800 text-sm leading-relaxed transition-all placeholder:text-slate-400 bg-white resize-y min-h-[160px]"
-								></textarea>
-							</div>
-
-							<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+							<div class="flex items-center justify-between text-[11px] text-slate-500 pt-2">
 								<span class="flex items-center gap-1 text-emerald-700">
 									<Save class="w-3 h-3 text-emerald-600" />
-									Autosave aktif: jawaban tersimpan otomatis saat Anda mengetik.
+									Autosave aktif: jawaban tersimpan otomatis saat Anda memilih opsi.
 								</span>
-								<span class="{currentAnswer.trim() ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
-									{currentAnswer.trim() ? '✓ Terisi' : 'Belum diisi'}
+								<span class="{currentAnswer ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
+									{currentAnswer ? `✓ Pilihan: Opsi ${currentAnswer}` : 'Belum dipilih'}
 								</span>
 							</div>
 						</div>
@@ -485,10 +491,10 @@
 </div>
 
 <!-- Review Modal -->
-<Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal Essai)" maxWidth="xl">
+<Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal)" maxWidth="xl">
 	<div class="space-y-4">
 		<p class="text-xs text-slate-600">
-			Pastikan seluruh 30 soal essai telah Anda jawab dengan baik sebelum melakukan pengiriman final.
+			Pastikan seluruh 30 soal pilihan ganda telah Anda jawab dengan baik sebelum melakukan pengiriman final.
 		</p>
 
 		<div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs font-semibold">
@@ -507,7 +513,7 @@
 				>
 					<span class="block text-xs font-bold">{idx + 1}</span>
 					<span class="block text-[10px] font-mono mt-0.5 {isAns ? 'font-bold text-emerald-700' : 'text-rose-500'}">
-						{isAns ? 'Isi' : '-'}
+						{isAns ? ans : '-'}
 					</span>
 				</button>
 			{/each}
@@ -536,7 +542,7 @@
 	bind:open={confirmSubmitOpen}
 	title="Kirim Jawaban Quiz Kaderisasi?"
 	message={isAllAnswered
-		? "Seluruh 30 soal essai telah Anda jawab. Apakah Anda yakin ingin mengirim kuis sekarang?"
+		? "Seluruh 30 soal telah Anda jawab. Apakah Anda yakin ingin mengirim kuis sekarang?"
 		: `Perhatian: Anda baru menjawab ${answeredCount} dari 30 butir soal (${totalQuestions - answeredCount} belum dijawab). Apakah Anda yakin ingin mengirim quiz sekarang?`}
 	confirmText="Ya, Kirim Quiz"
 	cancelText="Periksa Lagi"

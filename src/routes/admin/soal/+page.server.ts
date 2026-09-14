@@ -59,15 +59,15 @@ export const actions: Actions = {
 		const questionNumber = parseInt(formData.get('questionNumber') as string, 10);
 		const section = (formData.get('section') as string)?.trim();
 		const questionText = (formData.get('questionText') as string)?.trim();
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim();
-		const explanation = (formData.get('explanation') as string)?.trim() || null;
 		const optionA = (formData.get('optionA') as string)?.trim() || '';
 		const optionB = (formData.get('optionB') as string)?.trim() || '';
 		const optionC = (formData.get('optionC') as string)?.trim() || '';
 		const optionD = (formData.get('optionD') as string)?.trim() || '';
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim()?.toUpperCase() || 'A';
+		const explanation = (formData.get('explanation') as string)?.trim() || null;
 
-		if (!quizId || isNaN(questionNumber) || !section || !questionText || !correctAnswer) {
-			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, dan pedoman jawaban essai wajib diisi.' });
+		if (!quizId || isNaN(questionNumber) || !section || !questionText || !optionA || !optionB || !optionC || !optionD || !['A', 'B', 'C', 'D'].includes(correctAnswer)) {
+			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, seluruh opsi A-D, dan kunci jawaban wajib diisi.' });
 		}
 
 		try {
@@ -88,7 +88,7 @@ export const actions: Actions = {
 				});
 			}
 
-			return { success: true, message: 'Soal essai berhasil ditambahkan.' };
+			return { success: true, message: 'Soal pilihan ganda berhasil ditambahkan.' };
 		} catch (err: any) {
 			console.error('Error creating question:', err);
 			return fail(500, { error: err?.message || 'Gagal menambahkan soal.' });
@@ -101,15 +101,15 @@ export const actions: Actions = {
 		const questionNumber = parseInt(formData.get('questionNumber') as string, 10);
 		const section = (formData.get('section') as string)?.trim();
 		const questionText = (formData.get('questionText') as string)?.trim();
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim();
-		const explanation = (formData.get('explanation') as string)?.trim() || null;
 		const optionA = (formData.get('optionA') as string)?.trim() || '';
 		const optionB = (formData.get('optionB') as string)?.trim() || '';
 		const optionC = (formData.get('optionC') as string)?.trim() || '';
 		const optionD = (formData.get('optionD') as string)?.trim() || '';
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim()?.toUpperCase() || 'A';
+		const explanation = (formData.get('explanation') as string)?.trim() || null;
 
-		if (!id || isNaN(questionNumber) || !section || !questionText || !correctAnswer) {
-			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, dan pedoman jawaban essai wajib diisi.' });
+		if (!id || isNaN(questionNumber) || !section || !questionText || !optionA || !optionB || !optionC || !optionD || !['A', 'B', 'C', 'D'].includes(correctAnswer)) {
+			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, seluruh opsi A-D, dan kunci jawaban wajib diisi.' });
 		}
 
 		// Update in-memory
@@ -118,7 +118,11 @@ export const actions: Actions = {
 			target.questionNumber = questionNumber;
 			target.section = section;
 			target.questionText = questionText;
-			target.correctAnswer = correctAnswer;
+			target.optionA = optionA;
+			target.optionB = optionB;
+			target.optionC = optionC;
+			target.optionD = optionD;
+			target.correctAnswer = correctAnswer as any;
 			target.explanation = explanation || undefined;
 		}
 
@@ -147,13 +151,17 @@ export const actions: Actions = {
 						question_number: questionNumber,
 						section,
 						question_text: questionText,
+						option_a: optionA,
+						option_b: optionB,
+						option_c: optionC,
+						option_d: optionD,
 						correct_answer: correctAnswer,
 						explanation
 					})
 					.eq('id', id);
 			}
 
-			return { success: true, message: 'Soal essai berhasil diperbarui.' };
+			return { success: true, message: 'Soal pilihan ganda berhasil diperbarui.' };
 		} catch (err: any) {
 			console.error('Error updating question:', err);
 			return fail(500, { error: err?.message || 'Gagal memperbarui soal.' });

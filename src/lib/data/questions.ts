@@ -3,11 +3,11 @@ export interface QuestionItem {
 	questionNumber: number;
 	section: string;
 	questionText: string;
-	optionA?: string;
-	optionB?: string;
-	optionC?: string;
-	optionD?: string;
-	correctAnswer: string;
+	optionA: string;
+	optionB: string;
+	optionC: string;
+	optionD: string;
+	correctAnswer: 'A' | 'B' | 'C' | 'D';
 	explanation?: string;
 }
 
@@ -22,8 +22,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Membuat anggota mengikuti semua keputusan senior',
 		optionC: 'Menjaga hubungan antarwarga organisasi agar berjalan harmonis',
 		optionD: 'Membuat organisasi terlihat lebih formal',
-		correctAnswer: 'Etika dalam organisasi berfungsi sebagai pedoman moral dan tata kelakuan untuk menciptakan serta menjaga hubungan yang harmonis, saling menghormati dan menghargai, menjaga ketertiban, mencegah konflik internal, serta membangun iklim kerja sama yang kondusif dan produktif antaranggota demi mencapai tujuan bersama organisasi.',
-		explanation: 'Etika berorganisasi menjadi landasan moral fundamental dalam memelihara keharmonisan, rasa saling menghargai, keteraturan, dan iklim kerja sama tim yang solid.'
+		correctAnswer: 'C',
+		explanation: 'Etika organisasi berfungsi memelihara keharmonisan, saling menghormati, dan keteraturan antar anggota.'
 	},
 	{
 		id: 'q-02',
@@ -34,8 +34,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mendengarkan lawan bicara hingga selesai sebelum memberikan tanggapan',
 		optionC: 'Mengabaikan pendapat yang berbeda',
 		optionD: 'Menyampaikan pendapat dengan nada tinggi agar didengar',
-		correctAnswer: 'Mendengarkan dan menyimak lawan bicara hingga selesai secara utuh dengan penuh perhatian tanpa memotong pembicaraan, kemudian menyampaikan tanggapan, gagasan, atau kritik secara santun, rasional, objektif, dan dengan tutur kata yang menghargai keberagaman pendapat.',
-		explanation: 'Etika komunikasi berlandaskan pada kemampuan menyimak secara tuntas (active listening), empati, serta merespons dengan bahasa yang santun, tertib, dan berbasis argumentasi rasional.'
+		correctAnswer: 'B',
+		explanation: 'Etika komunikasi mengutamakan menyimak pembicaraan secara utuh sebelum merespons secara santun.'
 	},
 	{
 		id: 'q-03',
@@ -46,8 +46,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Hadir tepat waktu dan menyelesaikan tugas sesuai batas waktu',
 		optionC: 'Mengutamakan kepentingan pribadi',
 		optionD: 'Menghindari tugas yang dianggap sulit',
-		correctAnswer: 'Komitmen hadir tepat waktu dalam setiap agenda atau pertemuan organisasi, mematuhi peraturan dan kesepakatan internal yang berlaku, serta menuntaskan seluruh tugas dan amanah tanggung jawab secara optimal sesuai batas waktu (deadline) yang telah disepakati bersama.',
-		explanation: 'Disiplin organisasi diwujudkan melalui manajemen waktu yang baik, ketaatan pada kesepakatan aturan, dan penyelesaian tugas tepat waktu secara bertanggung jawab.'
+		correctAnswer: 'B',
+		explanation: 'Kedisiplinan diwujudkan dalam komitmen waktu dan penuntasan tanggung jawab sesuai tenggat.'
 	},
 	{
 		id: 'q-04',
@@ -58,8 +58,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mampu memengaruhi anggota lain',
 		optionC: 'Memiliki kesesuaian antara perkataan dan perbuatannya',
 		optionD: 'Selalu mendapatkan jabatan dalam organisasi',
-		correctAnswer: 'Kader yang memiliki keselarasan, kejujuran, dan konsistensi utuh antara nilai moral, apa yang diucapkan atau dijanjikan, dengan apa yang dilakukan dalam tindakan nyata, bersikap jujur, amanah, serta berani memegang teguh kebenaran dalam berbagai situasi organisasi.',
-		explanation: 'Integritas adalah kesatuan antara hati, perkataan, dan perbuatan yang dilandasi nilai kejujuran, amanah, serta konsistensi memegang prinsip kebenaran.'
+		correctAnswer: 'C',
+		explanation: 'Integritas merupakan keselarasan dan kejujuran antara apa yang diucapkan dengan apa yang dilakukan.'
 	},
 	{
 		id: 'q-05',
@@ -70,8 +70,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menghindari tugas ketika mengalami kesulitan',
 		optionC: 'Menyelesaikan amanah dan memberikan pertanggungjawaban',
 		optionD: 'Menyembunyikan kesalahan agar tidak mendapat teguran',
-		correctAnswer: 'Melaksanakan dan menyelesaikan setiap amanah tugas yang dipercayakan secara tuntas dan berkualitas, berani menanggung segala konsekuensi atas pekerjaan yang dilakukan, serta menyampaikan laporan pertanggungjawaban (LPJ) dengan jujur, terbuka, dan akuntabel.',
-		explanation: 'Tanggung jawab kader tercermin dari kesungguhan menuntaskan amanah tugas serta keterbukaan dan kejujuran dalam menyampaikan pertanggungjawaban.'
+		correctAnswer: 'C',
+		explanation: 'Tanggung jawab tercermin dari penyelesaian amanah serta transparansi pertanggungjawaban.'
 	},
 	{
 		id: 'q-06',
@@ -82,8 +82,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Persaingan antaranggota',
 		optionC: 'Kebersamaan, musyawarah, dan kepentingan bersama',
 		optionD: 'Keputusan dari anggota yang paling senior',
-		correctAnswer: 'Mengedepankan semangat kebersamaan, kepemimpinan bersama yang setara, pengambilan keputusan melalui musyawarah untuk mufakat, serta senantiasa mendahulukan kepentingan dan kemaslahatan organisasi di atas kepentingan pribadi maupun golongan.',
-		explanation: 'Prinsip kolektif kolegial menitikberatkan pada musyawarah mufakat, kesetaraan, gotong royong, dan komitmen mendahulukan kepentingan bersama organisasi.'
+		correctAnswer: 'C',
+		explanation: 'Prinsip kolektif kolegial berlandaskan semangat kebersamaan dan musyawarah mufakat.'
 	},
 	{
 		id: 'q-07',
@@ -94,8 +94,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Responsif',
 		optionC: 'Konsistensi',
 		optionD: 'Idealisme',
-		correctAnswer: 'Sikap responsif dan proaktif, yaitu kesigapan, kepekaan, dan kecepatan dalam menanggapi informasi atau kebutuhan koordinasi organisasi guna memperlancar alur komunikasi, kepastian informasi, dan kerja tim secara efektif.',
-		explanation: 'Sikap responsif menunjukkan kepedulian tinggi, komunikasi tanggap, dan komitmen menjaga kelancaran alur koordinasi serta kerja sama tim.'
+		correctAnswer: 'B',
+		explanation: 'Sikap responsif adalah tanggap dan cepat merespons kebutuhan serta komunikasi organisasi.'
 	},
 	{
 		id: 'q-08',
@@ -106,8 +106,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Senioritas',
 		optionC: 'Individualisme',
 		optionD: 'Kontrol sosial',
-		correctAnswer: 'Sikap inisiatif dan kemandirian, yaitu kesadaran diri yang peka untuk melakukan tindakan positif, solutif, dan bermanfaat bagi kemajuan organisasi tanpa harus selalu menunggu instruksi, komando, atau perintah dari orang lain.',
-		explanation: 'Inisiatif mencerminkan kepemimpinan diri, kepekaan situasional, dan dorongan sukarela untuk bergerak memberikan manfaat nyata bagi organisasi.'
+		correctAnswer: 'A',
+		explanation: 'Inisiatif adalah proaktif melakukan tindakan positif tanpa harus menunggu instruksi.'
 	},
 
 	// B. Gerakan Mahasiswa (9-11)
@@ -120,8 +120,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Berani menilai dan menyampaikan sesuatu berdasarkan fakta',
 		optionC: 'Tidak mau mengikuti aturan',
 		optionD: 'Selalu menyampaikan kritik secara terbuka tanpa mempertimbangkan etika',
-		correctAnswer: 'Kemampuan dan keberanian intelektual untuk menganalisis, mengkaji, dan menilai suatu fenomena, aturan, atau kebijakan secara mendalam, objektif, dan rasional berbasis data/fakta empiris, serta mampu menawarkan rekomendasi solusi alternatif yang konstruktif.',
-		explanation: 'Sikap kritis mahasiswa berpijak pada analisis fakta objektif, kebenaran ilmiah, dan berorientasi pada penyampaian saran/solusi yang konstruktif.'
+		correctAnswer: 'B',
+		explanation: 'Sikap kritis mahasiswa berpijak pada analisis objektif dan kebenaran fakta empiris.'
 	},
 	{
 		id: 'q-10',
@@ -132,8 +132,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Popularitas dan eksistensi mahasiswa',
 		optionC: 'Ilmu pengetahuan dan kepedulian terhadap nasib bangsa',
 		optionD: 'Kepentingan organisasi mahasiswa semata',
-		correctAnswer: 'Kesadaran moral dan intelektual atas ilmu pengetahuan yang dimiliki, panggilan nurani, serta kepedulian tulus terhadap problematika sosial, keadilan, pembelaan nasib rakyat, dan masa depan kemajuan bangsa.',
-		explanation: 'Gerakan mahasiswa bermula dari perpaduan tanggung jawab intelektual, kemurnian idealisme, dan kepedulian mendalam pada nasib masyarakat dan bangsa.'
+		correctAnswer: 'C',
+		explanation: 'Gerakan mahasiswa bermuara pada kesadaran intelektual serta kepedulian tulus terhadap masa depan bangsa.'
 	},
 	{
 		id: 'q-11',
@@ -144,8 +144,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengutamakan kebenaran dan keadilan',
 		optionC: 'Menghindari semua bentuk perbedaan pendapat',
 		optionD: 'Mempertahankan keadaan lama',
-		correctAnswer: 'Menjunjung tinggi nilai kebenaran ilmiah, keadilan sosial, kejujuran, kemanusiaan, independensi idealisme, serta konsistensi dalam memperjuangkan aspirasi dan hak-hak masyarakat luas tanpa terpengaruh kepentingan pragmatis.',
-		explanation: 'Kebenaran ilmiah, keadilan sosial, moralitas, dan independensi idealisme merupakan pilar abadi perjuangan gerakan mahasiswa.'
+		correctAnswer: 'B',
+		explanation: 'Kebenaran ilmiah dan keadilan sosial merupakan pilar abadi gerakan mahasiswa.'
 	},
 
 	// C. Tridharma Perguruan Tinggi (12-15)
@@ -158,8 +158,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Pendidikan, organisasi, dan kepemimpinan',
 		optionC: 'Penelitian, organisasi, dan pengabdian',
 		optionD: 'Pendidikan, politik, dan pengabdian',
-		correctAnswer: 'Tiga pilar kewajiban pokok sivitas akademika perguruan tinggi yang terdiri atas: 1. Pendidikan dan Pengajaran, 2. Penelitian dan Pengembangan (Riset), serta 3. Pengabdian kepada Masyarakat.',
-		explanation: 'Tridharma Perguruan Tinggi merupakan trilogi peran esensial kampus yang meliputi Pendidikan & Pengajaran, Penelitian & Pengembangan, dan Pengabdian kepada Masyarakat.'
+		correctAnswer: 'A',
+		explanation: 'Tiga pilar Tridharma adalah Pendidikan & Pengajaran, Penelitian & Pengembangan, dan Pengabdian kepada Masyarakat.'
 	},
 	{
 		id: 'q-13',
@@ -170,8 +170,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Hanya mengejar nilai akademik',
 		optionC: 'Menghindari kegiatan akademik',
 		optionD: 'Mengutamakan organisasi daripada pendidikan',
-		correctAnswer: 'Belajar secara tekun dan bersungguh-sungguh dalam menuntut ilmu, mengembangkan wawasan akademik dan keilmuan, berdiskusi kritis, serta aktif membagikan ilmu, keterampilan, atau mentoring pengetahuan kepada sesama mahasiswa dan lingkungan sekitar.',
-		explanation: 'Penerapan pilar pendidikan terwujud dalam kegigihan belajar, peningkatan kapasitas intelektual, serta semangat berbagi ilmu pengetahuan kepada sesama.'
+		correctAnswer: 'A',
+		explanation: 'Pendidikan tercermin dari ketekunan menuntut ilmu serta berbagi wawasan dengan sesama.'
 	},
 	{
 		id: 'q-14',
@@ -182,8 +182,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Penelitian dan pengembangan',
 		optionC: 'Pengabdian kepada masyarakat',
 		optionD: 'Pengembangan organisasi',
-		correctAnswer: 'Pilar Penelitian dan Pengembangan yang berintegrasi langsung dengan Pengabdian kepada Masyarakat, yaitu memanfaatkan metode ilmiah, riset, kajian teknologi/sains untuk menghasilkan temuan inovatif dan solusi aplikatif bagi permasalahan nyata masyarakat.',
-		explanation: 'Riset berbasis pemecahan masalah masyarakat mengintegrasikan keilmuan penelitian dengan wujud nyata pengabdian kepada masyarakat.'
+		correctAnswer: 'B',
+		explanation: 'Riset pemecahan masalah merupakan perwujudan pilar Penelitian dan Pengembangan.'
 	},
 	{
 		id: 'q-15',
@@ -194,8 +194,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Karena ketiganya saling melengkapi dan membentuk mahasiswa yang utuh',
 		optionC: 'Karena mahasiswa harus mengikuti semua kegiatan kampus',
 		optionD: 'Karena pengabdian lebih penting daripada pendidikan',
-		correctAnswer: 'Karena ketiga unsur Tridharma saling melengkapi, terhubung secara holistik, dan saling menguatkan untuk membentuk profil sarjana/mahasiswa yang utuh: unggul dalam wawasan teori akademis (pendidikan), mampu berpikir kritis-inovatif memecahkan masalah (penelitian), serta memiliki kepekaan sosial dan kebermanfaatan nyata bagi masyarakat (pengabdian).',
-		explanation: 'Keseimbangan ketiga pilar Tridharma melahirkan insan akademis yang berilmu amaliah, berdaya riset tinggi, dan berjiwa sosial dalam menjawab tantangan bangsa.'
+		correctAnswer: 'B',
+		explanation: 'Ketiga pilar terintegrasi dan saling menyempurnakan kompetensi seorang sarjana.'
 	},
 
 	// D. Peran dan Fungsi Mahasiswa (16-19)
@@ -208,8 +208,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Calon pemimpin masa depan',
 		optionC: 'Pengawas masyarakat',
 		optionD: 'Penggerak kegiatan sosial',
-		correctAnswer: 'Generasi penerus bangsa, aset cadangan masa depan, dan calon pemimpin masa depan yang dipersiapkan dengan integritas moral yang kuat, kapasitas keilmuan mumpuni, dan kepemimpinan berkualitas untuk melanjutkan estafet kepemimpinan bangsa dan organisasi.',
-		explanation: 'Sebagai Iron Stock, mahasiswa dipersiapkan menjadi generasi pelanjut dan bibit pemimpin masa depan yang berkarakter tangguh dan bermoral tinggi.'
+		correctAnswer: 'B',
+		explanation: 'Iron Stock menandakan mahasiswa sebagai penerus dan calon pemimpin bangsa di masa depan.'
 	},
 	{
 		id: 'q-17',
@@ -220,8 +220,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Guardian of Value',
 		optionC: 'Social Control',
 		optionD: 'Agent of Change',
-		correctAnswer: 'Peran Guardian of Value (penjaga nilai-nilai luhur), yaitu mahasiswa bertindak sebagai penjaga, pemelihara, benteng pertahanan moral, dan teladan dalam mengamalkan nilai-nilai etika, kebenaran, keadilan, kejujuran, dan kesusilaan dalam kehidupan kampus maupun bermasyarakat.',
-		explanation: 'Guardian of Value menempatkan mahasiswa sebagai benteng moral dan teladan dalam menjaga serta melestarikan nilai-nilai kebenaran dan etika luhur.'
+		correctAnswer: 'B',
+		explanation: 'Guardian of Value berarti penjaga dan pelestari nilai-nilai luhur dan etika moral.'
 	},
 	{
 		id: 'q-18',
@@ -232,8 +232,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengawasi agar kehidupan di kampus dan masyarakat berjalan sesuai aturan dan keadilan',
 		optionC: 'Mengatur mahasiswa lainnya',
 		optionD: 'Mengambil alih kewenangan pihak kampus',
-		correctAnswer: 'Peran Kontrol Sosial (Social Control), di mana mahasiswa bertindak sebagai pengawas independen yang peka, kritis, dan berani mengoreksi serta mengawal kebijakan kampus maupun pemerintah agar senantiasa berjalan sesuai aturan, berpihak pada keadilan, dan memperjuangkan kemaslahatan masyarakat.',
-		explanation: 'Social Control menegaskan peran mahasiswa sebagai jembatan aspirasi, pengawas sosial, dan pengawal kebijakan agar senantiasa adil dan sesuai norma.'
+		correctAnswer: 'B',
+		explanation: 'Social Control mengawasi dinamika sosial dan kebijakan agar senantiasa berpihak pada keadilan.'
 	},
 	{
 		id: 'q-19',
@@ -244,8 +244,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Guardian of Value',
 		optionC: 'Agent of Change',
 		optionD: 'Iron Stock',
-		correctAnswer: 'Peran Agent of Change (agen penggerak perubahan), yaitu mahasiswa bertindak sebagai pelopor, inovator, dan motor penggerak transformasi positif yang membawa ide-ide pembaruan kreatif dan solusi nyata guna memajukan masyarakat ke arah yang lebih baik.',
-		explanation: 'Agent of Change mencerminkan kapasitas mahasiswa sebagai inisiator perubahan sosial yang progresif, visioner, dan solutif.'
+		correctAnswer: 'C',
+		explanation: 'Agent of Change merupakan inisiator perubahan positif dan inovasi bagi masyarakat.'
 	},
 
 	// E. Organisasi Kemahasiswaan dan HIMA FST (20)
@@ -258,8 +258,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menjadi wadah pengembangan potensi, kepemimpinan, kerja sama, dan pembelajaran organisasi',
 		optionC: 'Menggantikan kegiatan akademik mahasiswa',
 		optionD: 'Menjadi tempat mencari popularitas',
-		correctAnswer: 'Sebagai wadah aspirasi dan pengembangan potensi minat, bakat, keilmuan, sarana pembelajaran kepemimpinan (leadership), melatih kerja sama tim (teamwork), memperluas jaringan/relasi, mengasah soft skill manajemen, serta sarana kontribusi nyata mahasiswa bagi almamater dan masyarakat.',
-		explanation: 'Organisasi kemahasiswaan seperti HIMA FST menjadi wadah kawah candradimuka dalam membentuk karakter kepemimpinan, kolaborasi, dan kontribusi nyata mahasiswa.'
+		correctAnswer: 'B',
+		explanation: 'HIMA FST adalah kawah candradimuka pembelajaran kepemimpinan dan pengembangan potensi mahasiswa.'
 	},
 
 	// F. Studi Kasus (21-30)
@@ -272,8 +272,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menunggu giliran berbicara dan menyampaikan ketidaksetujuan dengan bahasa yang santun',
 		optionC: 'Membalas dengan perkataan yang lebih keras',
 		optionD: 'Meminta pimpinan forum menghentikan peserta tersebut',
-		correctAnswer: 'Menerapkan etika forum dengan menyimak dan mendengarkan pembicaraan peserta lain sampai selesai secara tuntas, menunggu giliran berbicara atau meminta izin pimpinan sidang secara tertib, kemudian menyampaikan pandangan atau argumentasi penolakan secara santun, rasional, objektif, dan fokus pada substansi masalah tanpa menyerang pribadi.',
-		explanation: 'Etika musyawarah dan persidangan menuntut ketertiban, saling menghargai giliran bicara, kesantunan berbahasa, dan argumentasi rasional berbasis fakta.'
+		correctAnswer: 'B',
+		explanation: 'Etika forum menuntut kesantunan, menghargai giliran bicara, dan argumentasi rasional.'
 	},
 	{
 		id: 'q-22',
@@ -284,8 +284,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menyalahkan anggota lain',
 		optionC: 'Mengomunikasikan kendala dan perkembangan pekerjaan kepada pihak terkait serta mencari solusi',
 		optionD: 'Menunggu sampai ditanya oleh ketua',
-		correctAnswer: 'Segera mengomunikasikan progres dan kendala yang dihadapi secara proaktif, transparan, dan jujur kepada ketua atau penanggung jawab tim sebelum batas waktu berakhir, serta berkoordinasi bersama untuk mencari solusi, meminta arahan, atau mendistribusikan bantuan agar tugas tetap tuntas.',
-		explanation: 'Komunikasi proaktif sebelum batas waktu (deadline) menunjukkan kedewasaan berorganisasi, tanggung jawab, dan profesionalitas dalam manajemen kendala tim.'
+		correctAnswer: 'C',
+		explanation: 'Komunikasi proaktif sebelum tenggat waktu adalah kunci manajemen kepanitiaan profesional.'
 	},
 	{
 		id: 'q-23',
@@ -296,8 +296,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Membicarakan kesalahannya kepada anggota lain',
 		optionC: 'Mengingatkan dan mengajak memperbaiki laporan tersebut secara jujur',
 		optionD: 'Mengubah laporan diam-diam tanpa memberitahunya',
-		correctAnswer: 'Mengingatkan dan menegur rekan tersebut secara pribadi (empatik dan tertutup agar tidak mempermalukannya), menyampaikan letak kesalahan dengan bahasa yang baik, serta mengajaknya berkolaborasi untuk merevisi, mengoreksi, dan memperbaiki laporan tersebut secara jujur dan transparan.',
-		explanation: 'Sikap saling mengingatkan secara konstruktif dan membantu perbaikan laporan mencerminkan kepedulian, integritas, dan kejujuran dalam berorganisasi.'
+		correctAnswer: 'C',
+		explanation: 'Kader yang baik saling mengingatkan dan memperbaiki kesalahan secara konstruktif dan jujur.'
 	},
 	{
 		id: 'q-24',
@@ -308,8 +308,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengikuti semua keinginannya',
 		optionC: 'Mengajak berdiskusi dan mencari keputusan melalui musyawarah dengan mengutamakan kepentingan bersama',
 		optionD: 'Membentuk kelompok baru tanpa memberitahunya',
-		correctAnswer: 'Mengajak anggota tersebut berdialog dan berdiskusi secara terbuka dalam suasana kekeluargaan yang santun, menjelaskan perspektif tim, mengedepankan musyawarah untuk mufakat, serta menekankan pentingnya mendahulukan tujuan dan kepentingan bersama organisasi di atas ego atau kepentingan pribadi.',
-		explanation: 'Prinsip kolektif kolegial menyelesaikan perbedaan dengan musyawarah mufakat, menurunkan ego pribadi, dan memprioritaskan kesuksesan bersama.'
+		correctAnswer: 'C',
+		explanation: 'Musyawarah mufakat mengesampingkan ego pribadi demi tujuan bersama.'
 	},
 	{
 		id: 'q-25',
@@ -320,8 +320,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Membantu karena menunjukkan inisiatif dan kepedulian terhadap sesama anggota',
 		optionC: 'Membiarkannya agar belajar sendiri',
 		optionD: 'Melaporkannya kepada ketua karena dianggap tidak mampu',
-		correctAnswer: 'Mengambil inisiatif secara sukarela untuk mendekati, mendampingi, mengarahkan, dan membantunya memahami alur kerja kepanitiaan/organisasi sebagai wujud kepedulian, empati, dan solidaritas sesama kader demi terciptanya soliditas tim.',
-		explanation: 'Inisiatif merangkul dan membimbing kader baru memperkuat rasa kekeluargaan, kaderisasi berkelanjutan, dan efektivitas kerja organisasi.'
+		correctAnswer: 'B',
+		explanation: 'Inisiatif membantu rekan kader memperkuat soliditas dan iklim kerja organisasi.'
 	},
 	{
 		id: 'q-26',
@@ -332,8 +332,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Mengajak mahasiswa lain melakukan tindakan tanpa mencari fakta',
 		optionC: 'Mengumpulkan fakta, menyampaikan kritik secara kritis tetapi tetap santun, dan mengupayakan solusi',
 		optionD: 'Membiarkannya karena mahasiswa tidak boleh mencampuri urusan kampus',
-		correctAnswer: 'Mengumpulkan data, fakta, dan bukti empiris yang valid di lapangan terlebih dahulu, menyusun telaah/kajian ilmiah secara komprehensif dan objektif, lalu menyampaikan aspirasi atau kritik secara santun dan terstruktur melalui forum dialog/jalur resmi dengan menyertakan tawaran rekomendasi solusi konkret.',
-		explanation: 'Karakter gerakan mahasiswa berpijak pada kecendekiaan: kritik berbasis kajian fakta objektif, disampaikan secara beretika, dan berorientasi pada tawaran solusi perbaikan.'
+		correctAnswer: 'C',
+		explanation: 'Kritik mahasiswa berbasis data valid, disampaikan dengan etika, dan menawarkan solusi nyata.'
 	},
 	{
 		id: 'q-27',
@@ -344,8 +344,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Penelitian dan pengembangan dengan pengabdian kepada masyarakat',
 		optionC: 'Organisasi dengan kepemimpinan',
 		optionD: 'Iron Stock dengan Guardian of Value',
-		correctAnswer: 'Keterpaduan dan sinergi harmonis antara pilar Penelitian dan Pengembangan (riset keilmuan sains/teknologi) dengan pilar Pengabdian kepada Masyarakat, yaitu mengaplikasikan hasil riset dan metode ilmiah untuk menyelesaikan persoalan nyata di tengah masyarakat.',
-		explanation: 'Penerapan hasil penelitian ilmiah untuk kemaslahatan publik merupakan integrasi nyata dari pilar ke-2 dan ke-3 Tridharma Perguruan Tinggi.'
+		correctAnswer: 'B',
+		explanation: 'Menggunakan hasil riset ilmiah untuk menyelesaikan problem publik mengintegrasikan pilar ke-2 dan ke-3 Tridharma.'
 	},
 	{
 		id: 'q-28',
@@ -356,8 +356,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Kolektif kolegial dan etika forum',
 		optionC: 'Kurangnya sikap kritis',
 		optionD: 'Ketergantungan kepada senior',
-		correctAnswer: 'Penerapan prinsip kolektif kolegial, etika berorganisasi, kedewasaan sikap (sikap sportif/legawa), serta komitmen loyalitas yang tinggi untuk menghormati dan menjalankan keputusan konsensus musyawarah mufakat demi kepentingan bersama.',
-		explanation: 'Menghormati dan melaksanakan keputusan musyawarah dengan penuh tanggung jawab adalah cermin kedewasaan berdemokrasi dan komitmen kolektif kolegial.'
+		correctAnswer: 'B',
+		explanation: 'Menghormati keputusan konsensus forum adalah ciri kedewasaan berorganisasi.'
 	},
 	{
 		id: 'q-29',
@@ -368,8 +368,8 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Organisasi hanya boleh diikuti mahasiswa tertentu',
 		optionC: 'Organisasi merupakan ruang pembelajaran untuk mengembangkan kemampuan, tanggung jawab, kerja sama, dan kontribusi',
 		optionD: 'Semua mahasiswa wajib memiliki jabatan organisasi',
-		correctAnswer: 'Organisasi kemahasiswaan bukan sekadar sarana formalitas mencari sertifikat atau kepentingan pragmatis pribadi, melainkan wahana proses pembelajaran jangka panjang untuk melatih tanggung jawab, integritas, kepemimpinan, kepedulian sosial, kerja sama, dan memberikan kontribusi nyata yang berkelanjutan.',
-		explanation: 'Nilai sejati berorganisasi terletak pada proses pembentukan karakter, pengabdian yang tulus, tanggung jawab, dan kontribusi nyata, bukan sekadar sertifikat.'
+		correctAnswer: 'C',
+		explanation: 'Organisasi kemahasiswaan berorientasi pada proses kontribusi, tanggung jawab, dan pembelajaran bersama.'
 	},
 	{
 		id: 'q-30',
@@ -380,7 +380,7 @@ export const OFFICIAL_30_QUESTIONS: QuestionItem[] = [
 		optionB: 'Menunggu selalu diberikan tugas',
 		optionC: 'Berkontribusi sesuai kemampuan, menjaga etika, bertanggung jawab, bekerja sama, serta ikut mengembangkan organisasi dan memberikan manfaat',
 		optionD: 'Berusaha mendapatkan jabatan agar lebih dikenal',
-		correctAnswer: 'Berkomitmen memberikan kontribusi aktif, tulus, dan optimal sesuai minat serta keahlian, senantiasa menjaga etika moral dan integritas, bertanggung jawab penuh atas setiap amanah yang diemban, membina kerja sama solid dengan seluruh pengurus, serta terus berikhtiar memajukan HIMA FST UT Bandung agar memberi manfaat luas bagi mahasiswa dan masyarakat.',
-		explanation: 'Pemahaman utuh kaderisasi bermuara pada dedikasi tulus, integritas pribadi, kerja sama harmonis, dan komitmen kontribusi nyata memajukan HIMA FST UT Bandung.'
+		correctAnswer: 'C',
+		explanation: 'Wujud nyata kelulusan kaderisasi adalah dedikasi, integritas, dan kontribusi aktif bagi HIMA FST UT Bandung.'
 	}
 ];

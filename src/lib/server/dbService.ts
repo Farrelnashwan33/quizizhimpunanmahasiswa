@@ -62,6 +62,41 @@ export interface FormattedAttempt {
 	tabSwitchCount?: number;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(val: any): boolean {
+	return typeof val === 'string' && UUID_REGEX.test(val.trim());
+}
+
+/**
+ * Deterministic Question UUID Resolver:
+ * Ensures questionId ('q-01', '1', 'num_1', etc.) maps to a valid UUID
+ * matching the Supabase questions table migration.
+ */
+export function resolveQuestionUuid(questionIdOrNum: any): string {
+	if (typeof questionIdOrNum === 'string' && isUuid(questionIdOrNum)) {
+		return questionIdOrNum.trim();
+	}
+	const str = String(questionIdOrNum || '');
+	const numMatch = str.match(/\d+/);
+	if (numMatch) {
+		const num = parseInt(numMatch[0], 10);
+		if (num >= 1 && num <= 30) {
+			return `00000000-0000-0000-0000-${String(num).padStart(12, '0')}`;
+		}
+	}
+	return '00000000-0000-0000-0000-000000000001';
+}
+
+export function extractQuestionNumber(questionIdOrNum: any): number {
+	const str = String(questionIdOrNum || '');
+	const numMatch = str.match(/\d+/);
+	if (numMatch) {
+		const num = parseInt(numMatch[0], 10);
+		if (num >= 1 && num <= 30) return num;
+	}
+	return 1;
+}
+
 /**
  * ULTRA-RESILIENT DATA LOADER:
  * 1. Queries Prisma (quiz_attempts & profiles)
@@ -172,7 +207,6 @@ async function fetchAllRawDataFromDatabase(): Promise<FormattedAttempt[]> {
 			if (pData && pData.length > 0) {
 				supaProfiles = pData;
 			} else {
-				// Alternative table name
 				const { data: uData } = await supabaseAdmin.from('users').select('*');
 				if (uData && uData.length > 0) supaProfiles = uData;
 			}
@@ -319,12 +353,10 @@ export async function getAllQuizAttempts(params: {
 
 	const allAttempts = await fetchAllRawDataFromDatabase();
 
-	// Extract unique prodi list
 	const prodiList = Array.from(
 		new Set(allAttempts.map((a) => a.student?.programStudi).filter(Boolean))
 	);
 
-	// Apply Filters
 	let filtered = allAttempts;
 
 	if (search) {
@@ -345,7 +377,6 @@ export async function getAllQuizAttempts(params: {
 		filtered = filtered.filter((a) => a.status === status);
 	}
 
-	// Apply Sorting
 	filtered.sort((a, b) => {
 		if (sort === 'score_asc') return (a.score ?? 0) - (b.score ?? 0);
 		if (sort === 'time_desc') {
@@ -361,7 +392,6 @@ export async function getAllQuizAttempts(params: {
 		if (sort === 'name_asc') {
 			return (a.student?.fullName || '').localeCompare(b.student?.fullName || '');
 		}
-		// Default: score_desc
 		return (b.score ?? 0) - (a.score ?? 0);
 	});
 
@@ -393,10 +423,8 @@ export async function getQuizAttemptById(idOrNim: string) {
 		return null;
 	}
 
-	// Build map of student answers
 	const answerMap = new Map<string, any>();
 
-	// Add pre-loaded answers
 	if (attempt.answers && attempt.answers.length > 0) {
 		for (const a of attempt.answers) {
 			const qId = a.questionId || a.question_id;
@@ -406,8 +434,7 @@ export async function getQuizAttemptById(idOrNim: string) {
 		}
 	}
 
-	// Targeted query via Prisma if answerMap is empty or small
-	if (answerMap.size < OFFICIAL_30_QUESTIONS.length && isDatabaseConfigured && attempt.id.includes('-')) {
+	if (answerMap.size < OFFICIAL_30_QUESTIONS.length && isDatabaseConfigured && isUuid(attempt.id)) {
 		try {
 			const directPrismaAnswers = await prisma.answer.findMany({
 				where: { attemptId: attempt.id },
@@ -422,10 +449,8 @@ export async function getQuizAttemptById(idOrNim: string) {
 		}
 	}
 
-	// Targeted query via Supabase REST if answerMap is still incomplete
 	if (answerMap.size < OFFICIAL_30_QUESTIONS.length && isSupabaseConfigured) {
 		try {
-			// Query by attempt_id
 			const { data: supaDirectAnswers } = await supabaseAdmin
 				.from('answers')
 				.select('*')
@@ -434,25 +459,9 @@ export async function getQuizAttemptById(idOrNim: string) {
 			if (supaDirectAnswers && supaDirectAnswers.length > 0) {
 				for (const a of supaDirectAnswers) {
 					const qId = a.question_id || a.questionId;
-					const qNum = a.question_number || a.questionNumber;
+					const qNum = a.question_number || a.questionNumber || extractQuestionNumber(qId);
 					if (qId) answerMap.set(String(qId), a);
-					if (qNum !== undefined && qNum !== null) answerMap.set(`num_${qNum}`, a);
-				}
-			}
-
-			// Also try alternative table names if empty
-			if (answerMap.size === 0) {
-				const { data: altAnswers } = await supabaseAdmin
-					.from('jawaban')
-					.select('*')
-					.eq('attempt_id', attempt.id);
-				if (altAnswers && altAnswers.length > 0) {
-					for (const a of altAnswers) {
-						const qId = a.question_id || a.questionId;
-						const qNum = a.question_number || a.questionNumber || a.nomor_soal;
-						if (qId) answerMap.set(String(qId), a);
-						if (qNum !== undefined && qNum !== null) answerMap.set(`num_${qNum}`, a);
-					}
+					if (qNum) answerMap.set(`num_${qNum}`, a);
 				}
 			}
 		} catch (supaErr) {
@@ -460,10 +469,11 @@ export async function getQuizAttemptById(idOrNim: string) {
 		}
 	}
 
-	// Build detailed 30 questions breakdown
 	const detailedQuestions: DetailedAnswerItem[] = OFFICIAL_30_QUESTIONS.map((q) => {
+		const deterministicUuid = resolveQuestionUuid(q.questionNumber);
 		const ans =
 			answerMap.get(String(q.id)) ||
+			answerMap.get(deterministicUuid) ||
 			answerMap.get(`num_${q.questionNumber}`) ||
 			answerMap.get(String(q.questionNumber));
 
@@ -671,7 +681,7 @@ export async function getAllMahasiswa(params: { search?: string; prodi?: string 
 }
 
 /**
- * 6. START QUIZ ATTEMPT
+ * 6. START QUIZ ATTEMPT (WITH RECOVERY OF EXISTING IN-PROGRESS STATE)
  */
 export async function startQuizAttempt(data: {
 	studentName: string;
@@ -686,10 +696,98 @@ export async function startQuizAttempt(data: {
 	const studentEmail = `${cleanNim}@student.ut.ac.id`;
 	const now = new Date();
 
-	let attemptId = 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
-	let studentId = 'std-' + cleanNim;
+	let attemptId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0');
+	let studentId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'std-' + cleanNim;
 	let quizId = '11111111-1111-1111-1111-111111111111';
+	const savedAnswers: Record<string, string> = {};
 
+	// 1. SUPABASE PROFILE & ATTEMPT MANAGEMENT
+	if (isSupabaseConfigured) {
+		try {
+			// Ensure Quiz row exists
+			await supabaseAdmin.from('quizzes').upsert({
+				id: quizId,
+				title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung',
+				duration_minutes: 60,
+				is_active: true
+			}, { onConflict: 'id' });
+
+			// Upsert Profile
+			const { data: supaProf } = await supabaseAdmin
+				.from('profiles')
+				.upsert(
+					{
+						full_name: cleanName,
+						nim: cleanNim,
+						email: studentEmail,
+						program_studi: cleanProdi,
+						whatsapp: cleanWa,
+						role: 'mahasiswa'
+					},
+					{ onConflict: 'nim' }
+				)
+				.select('id')
+				.maybeSingle();
+
+			if (supaProf && supaProf.id) {
+				studentId = supaProf.id;
+			}
+
+			// Check if student already has an in_progress attempt
+			const { data: existingSupaAttempt } = await supabaseAdmin
+				.from('quiz_attempts')
+				.select('id, started_at, status')
+				.eq('student_id', studentId)
+				.eq('quiz_id', quizId)
+				.eq('status', 'in_progress')
+				.order('started_at', { ascending: false })
+				.limit(1)
+				.maybeSingle();
+
+			if (existingSupaAttempt && existingSupaAttempt.id) {
+				attemptId = existingSupaAttempt.id;
+			} else {
+				// Create new attempt row in Supabase
+				const { data: newSupaAtt } = await supabaseAdmin
+					.from('quiz_attempts')
+					.insert({
+						id: attemptId,
+						quiz_id: quizId,
+						student_id: studentId,
+						status: 'in_progress',
+						started_at: now.toISOString(),
+						total_questions: 30
+					})
+					.select('id')
+					.maybeSingle();
+
+				if (newSupaAtt && newSupaAtt.id) {
+					attemptId = newSupaAtt.id;
+				}
+			}
+
+			// Load any existing answers for this attempt from Supabase
+			const { data: existingAnswers } = await supabaseAdmin
+				.from('answers')
+				.select('question_id, selected_answer')
+				.eq('attempt_id', attemptId);
+
+			if (existingAnswers && existingAnswers.length > 0) {
+				for (const a of existingAnswers) {
+					if (a.selected_answer) {
+						const num = extractQuestionNumber(a.question_id);
+						savedAnswers[a.question_id] = a.selected_answer;
+						savedAnswers[`q-${String(num).padStart(2, '0')}`] = a.selected_answer;
+						savedAnswers[String(num)] = a.selected_answer;
+					}
+				}
+			}
+		} catch (supaErr) {
+			console.warn('Supabase startQuizAttempt warning:', supaErr);
+		}
+	}
+
+	// 2. PRISMA BACKEND SINKRONISASI
 	if (isDatabaseConfigured) {
 		try {
 			let quiz = await prisma.quiz.findFirst();
@@ -717,6 +815,7 @@ export async function startQuizAttempt(data: {
 			} else {
 				profile = await prisma.profile.create({
 					data: {
+						id: isUuid(studentId) ? studentId : undefined,
 						fullName: cleanName,
 						nim: cleanNim,
 						email: studentEmail,
@@ -729,58 +828,41 @@ export async function startQuizAttempt(data: {
 
 			studentId = profile.id;
 
-			const attempt = await prisma.quizAttempt.create({
-				data: {
-					quizId,
-					studentId: profile.id,
-					status: 'in_progress',
-					startedAt: now,
-					totalQuestions: 30
-				}
+			let targetAttempt = await prisma.quizAttempt.findFirst({
+				where: { studentId: profile.id, quizId, status: 'in_progress' },
+				orderBy: { startedAt: 'desc' },
+				include: { answers: true }
 			});
 
-			attemptId = attempt.id;
-		} catch (prismaErr) {
-			console.warn('Prisma start notice:', prismaErr);
-		}
-	}
-
-	if (isSupabaseConfigured) {
-		try {
-			const { data: supaProf } = await supabaseAdmin
-				.from('profiles')
-				.upsert(
-					{
-						full_name: cleanName,
-						nim: cleanNim,
-						email: studentEmail,
-						program_studi: cleanProdi,
-						whatsapp: cleanWa,
-						role: 'mahasiswa'
+			if (!targetAttempt) {
+				targetAttempt = await prisma.quizAttempt.create({
+					data: {
+						id: isUuid(attemptId) ? attemptId : undefined,
+						quizId,
+						studentId: profile.id,
+						status: 'in_progress',
+						startedAt: now,
+						totalQuestions: 30
 					},
-					{ onConflict: 'nim' }
-				)
-				.select('id')
-				.maybeSingle();
+					include: { answers: true }
+				});
+			}
 
-			if (supaProf) studentId = supaProf.id;
-
-			const { data: supaAtt } = await supabaseAdmin
-				.from('quiz_attempts')
-				.insert({
-					id: attemptId.includes('-') && attemptId.length === 36 ? attemptId : undefined,
-					quiz_id: quizId,
-					student_id: studentId,
-					status: 'in_progress',
-					started_at: now.toISOString(),
-					total_questions: 30
-				})
-				.select('id')
-				.maybeSingle();
-
-			if (supaAtt) attemptId = supaAtt.id;
-		} catch (supaErr) {
-			console.warn('Supabase REST start notice:', supaErr);
+			if (targetAttempt) {
+				attemptId = targetAttempt.id;
+				if (targetAttempt.answers) {
+					for (const ans of targetAttempt.answers) {
+						if (ans.selectedAnswer) {
+							const num = extractQuestionNumber(ans.questionId);
+							savedAnswers[ans.questionId] = ans.selectedAnswer;
+							savedAnswers[`q-${String(num).padStart(2, '0')}`] = ans.selectedAnswer;
+							savedAnswers[String(num)] = ans.selectedAnswer;
+						}
+					}
+				}
+			}
+		} catch (prismaErr) {
+			console.warn('Prisma startQuizAttempt notice:', prismaErr);
 		}
 	}
 
@@ -820,17 +902,110 @@ export async function startQuizAttempt(data: {
 		studentName: cleanName,
 		nim: cleanNim,
 		programStudi: cleanProdi,
-		startedAt: now.toISOString()
+		startedAt: now.toISOString(),
+		savedAnswers
 	};
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export function isUuid(val: any): boolean {
-	return typeof val === 'string' && UUID_REGEX.test(val);
+/**
+ * 7. LOAD ATTEMPT & ANSWERS FOR REFRESH RECOVERY
+ */
+export async function loadAttemptAnswers(params: { attemptId?: string; nim?: string }) {
+	const { attemptId, nim } = params;
+	const savedAnswers: Record<string, string> = {};
+	let activeAttempt: any = null;
+	let studentProfile: any = null;
+
+	// A. Query Supabase
+	if (isSupabaseConfigured) {
+		try {
+			if (attemptId && isUuid(attemptId)) {
+				const { data: att } = await supabaseAdmin
+					.from('quiz_attempts')
+					.select('*, profiles(*)')
+					.eq('id', attemptId)
+					.maybeSingle();
+				if (att) {
+					activeAttempt = att;
+					studentProfile = att.profiles;
+				}
+			} else if (nim) {
+				const { data: prof } = await supabaseAdmin
+					.from('profiles')
+					.select('id, full_name, nim, email, program_studi, whatsapp, role')
+					.eq('nim', nim)
+					.maybeSingle();
+
+				if (prof) {
+					studentProfile = prof;
+					const { data: att } = await supabaseAdmin
+						.from('quiz_attempts')
+						.select('*')
+						.eq('student_id', prof.id)
+						.order('started_at', { ascending: false })
+						.limit(1)
+						.maybeSingle();
+					if (att) activeAttempt = att;
+				}
+			}
+
+			const targetAttemptId = activeAttempt?.id || attemptId;
+			if (targetAttemptId && isUuid(targetAttemptId)) {
+				const { data: supaAnswers } = await supabaseAdmin
+					.from('answers')
+					.select('question_id, selected_answer, is_correct')
+					.eq('attempt_id', targetAttemptId);
+
+				if (supaAnswers && supaAnswers.length > 0) {
+					for (const ans of supaAnswers) {
+						if (ans.selected_answer) {
+							const num = extractQuestionNumber(ans.question_id);
+							savedAnswers[ans.question_id] = ans.selected_answer;
+							savedAnswers[`q-${String(num).padStart(2, '0')}`] = ans.selected_answer;
+							savedAnswers[String(num)] = ans.selected_answer;
+						}
+					}
+				}
+			}
+		} catch (supaErr) {
+			console.warn('Supabase loadAttemptAnswers notice:', supaErr);
+		}
+	}
+
+	// B. Query Prisma as secondary source
+	if (isDatabaseConfigured && Object.keys(savedAnswers).length === 0) {
+		try {
+			const targetAttId = activeAttempt?.id || attemptId;
+			if (targetAttId && isUuid(targetAttId)) {
+				const prismaAnswers = await prisma.answer.findMany({
+					where: { attemptId: targetAttId },
+					include: { question: true }
+				});
+				for (const a of prismaAnswers) {
+					if (a.selectedAnswer) {
+						const num = a.question?.questionNumber || extractQuestionNumber(a.questionId);
+						savedAnswers[a.questionId] = a.selectedAnswer;
+						savedAnswers[`q-${String(num).padStart(2, '0')}`] = a.selectedAnswer;
+						savedAnswers[String(num)] = a.selectedAnswer;
+					}
+				}
+			}
+		} catch (prismaErr) {
+			console.warn('Prisma loadAttemptAnswers notice:', prismaErr);
+		}
+	}
+
+	return {
+		success: true,
+		attempt: activeAttempt,
+		student: studentProfile,
+		savedAnswers,
+		isCompleted: activeAttempt?.status === 'completed'
+	};
 }
 
 /**
- * 7. SAVE ANSWER
+ * 8. SAVE ANSWER (ATOMIC ESSAY PERSISTENCE IN SUPABASE & PRISMA)
  */
 export async function saveAnswer(data: {
 	attemptId: string;
@@ -840,64 +1015,79 @@ export async function saveAnswer(data: {
 	const { attemptId, questionId, selectedAnswer } = data;
 	const now = new Date();
 
-	let resolvedQuestionId: string | null = isUuid(questionId) ? questionId : null;
-	const numMatch = questionId.match(/\d+/);
-	const num = numMatch ? parseInt(numMatch[0], 10) : null;
-	const evalResult = num !== null ? evaluateQuestionAnswer(num, selectedAnswer) : null;
+	const resolvedQuestionUuid = resolveQuestionUuid(questionId);
+	const questionNumber = extractQuestionNumber(questionId);
+	const evalResult = evaluateQuestionAnswer(questionNumber, selectedAnswer);
 
-	if (!resolvedQuestionId && isDatabaseConfigured) {
-		if (num !== null) {
-			try {
-				const q = await prisma.question.findFirst({
-					where: { questionNumber: num }
-				});
-				if (q && isUuid(q.id)) {
-					resolvedQuestionId = q.id;
-				}
-			} catch (e) {}
-		}
-	}
-
-	if (isDatabaseConfigured && isUuid(attemptId) && resolvedQuestionId && isUuid(resolvedQuestionId)) {
+	// A. SUPABASE REAL-TIME UPSERT
+	if (isSupabaseConfigured && isUuid(attemptId)) {
 		try {
-			await prisma.answer.upsert({
-				where: {
-					attemptId_questionId: { attemptId, questionId: resolvedQuestionId }
-				},
-				update: {
-					selectedAnswer: evalResult?.normalizedChoice || selectedAnswer,
-					isCorrect: evalResult ? evalResult.isCorrect : undefined,
-					answeredAt: now
-				},
-				create: {
-					attemptId,
-					questionId: resolvedQuestionId,
-					selectedAnswer: evalResult?.normalizedChoice || selectedAnswer,
-					isCorrect: evalResult ? evalResult.isCorrect : undefined,
-					answeredAt: now
-				}
-			});
-		} catch (err) {
-			console.warn('saveAnswer prisma notice:', err);
-		}
-	}
+			// Ensure question exists in Supabase to avoid FK error
+			const defaultQuizId = '11111111-1111-1111-1111-111111111111';
+			const refQuestion = OFFICIAL_30_QUESTIONS.find((q) => q.questionNumber === questionNumber);
 
-	if (isSupabaseConfigured && isUuid(attemptId) && resolvedQuestionId && isUuid(resolvedQuestionId)) {
-		try {
-			await supabaseAdmin.from('answers').upsert(
+			await supabaseAdmin.from('questions').upsert({
+				id: resolvedQuestionUuid,
+				quiz_id: defaultQuizId,
+				question_number: questionNumber,
+				section: refQuestion?.section || 'Materi Kaderisasi',
+				question_text: refQuestion?.questionText || 'Pertanyaan essay...',
+				correct_answer: refQuestion?.correctAnswer || 'Referensi jawaban...',
+				explanation: refQuestion?.explanation || ''
+			}, { onConflict: 'id' });
+
+			// Upsert answer to Supabase answers table
+			const { error: supaErr } = await supabaseAdmin.from('answers').upsert(
 				{
 					attempt_id: attemptId,
-					question_id: resolvedQuestionId,
-					selected_answer: evalResult?.normalizedChoice || selectedAnswer,
-					is_correct: evalResult ? evalResult.isCorrect : undefined,
+					question_id: resolvedQuestionUuid,
+					selected_answer: selectedAnswer,
+					is_correct: evalResult.isCorrect,
 					answered_at: now.toISOString()
 				},
 				{ onConflict: 'attempt_id,question_id' }
 			);
-		} catch (err) {}
+
+			if (supaErr) {
+				console.error('Supabase answers upsert error:', supaErr);
+			}
+		} catch (supaErr) {
+			console.warn('Supabase saveAnswer catch notice:', supaErr);
+		}
 	}
 
-	return { success: true };
+	// B. PRISMA DIRECT UPSERT
+	if (isDatabaseConfigured && isUuid(attemptId) && isUuid(resolvedQuestionUuid)) {
+		try {
+			await prisma.answer.upsert({
+				where: {
+					attemptId_questionId: { attemptId, questionId: resolvedQuestionUuid }
+				},
+				update: {
+					selectedAnswer: selectedAnswer,
+					isCorrect: evalResult.isCorrect,
+					answeredAt: now
+				},
+				create: {
+					attemptId,
+					questionId: resolvedQuestionUuid,
+					selectedAnswer: selectedAnswer,
+					isCorrect: evalResult.isCorrect,
+					answeredAt: now
+				}
+			});
+		} catch (err) {
+			console.warn('Prisma saveAnswer notice:', err);
+		}
+	}
+
+	return {
+		success: true,
+		attemptId,
+		questionId,
+		questionUuid: resolvedQuestionUuid,
+		savedAt: now.toISOString()
+	};
 }
 
 const INDONESIAN_STOPWORDS = new Set([
@@ -957,7 +1147,6 @@ export function evaluateQuestionAnswer(
 
 	// 3. Combined essay quality ratio (0.0 to 1.0)
 	let finalRatio = depthRatio * 0.35 + keywordRatio * 0.65;
-	// Give benefit of the doubt for comprehensive written explanations
 	if (wordCount >= 10 && finalRatio < 0.6) {
 		finalRatio = 0.6;
 	}
@@ -968,7 +1157,7 @@ export function evaluateQuestionAnswer(
 	finalRatio = Math.max(0.1, Math.min(1.0, finalRatio));
 
 	const points = Math.round(finalRatio * weight * 100) / 100;
-	const isCorrect = points >= weight * 0.5; // dianggap sesuai jika poin >= 50%
+	const isCorrect = points >= weight * 0.5;
 
 	return {
 		isCorrect,
@@ -977,11 +1166,10 @@ export function evaluateQuestionAnswer(
 	};
 }
 
-// Backward-compatibility alias
 export const evaluateEssayItem = (qNum: number, text: string | null) => evaluateQuestionAnswer(qNum, text);
 
 /**
- * 8. SUBMIT QUIZ ATTEMPT (PILIHAN GANDA 30 SOAL OTOMATIS DINILAI)
+ * 9. SUBMIT QUIZ ATTEMPT (SAVES ALL 30 ESSAY ANSWERS & WRITES REKAP TO SUPABASE)
  */
 export async function submitQuizAttempt(data: {
 	attemptId?: string;
@@ -1003,14 +1191,18 @@ export async function submitQuizAttempt(data: {
 	let totalEarnedPoints = 0;
 
 	const answersBreakdown = OFFICIAL_30_QUESTIONS.map((q) => {
+		const deterministicUuid = resolveQuestionUuid(q.questionNumber);
 		const rawAns =
 			data.answers[q.id] ??
+			data.answers[deterministicUuid] ??
 			data.answers[q.questionNumber.toString()] ??
 			data.answers[`num_${q.questionNumber}`] ??
+			data.answers[`q-${String(q.questionNumber).padStart(2, '0')}`] ??
 			null;
-		const studentChoice = typeof rawAns === 'string' && rawAns.trim() !== '' ? rawAns.trim() : null;
 
+		const studentChoice = typeof rawAns === 'string' && rawAns.trim() !== '' ? rawAns.trim() : null;
 		const evaluation = evaluateQuestionAnswer(q.questionNumber, studentChoice);
+
 		if (studentChoice !== null) {
 			answeredCount++;
 			totalEarnedPoints += evaluation.points;
@@ -1018,7 +1210,7 @@ export async function submitQuizAttempt(data: {
 		}
 
 		return {
-			questionId: q.id,
+			questionId: deterministicUuid,
 			questionNumber: q.questionNumber,
 			section: q.section,
 			questionText: q.questionText,
@@ -1035,10 +1227,105 @@ export async function submitQuizAttempt(data: {
 	const computedScore = Math.min(100, Math.round(totalEarnedPoints));
 	const score: number = computedScore;
 
-	let attemptId = data.attemptId || 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
-	let studentId = 'std-' + cleanNim;
+	let attemptId = data.attemptId && isUuid(data.attemptId) ? data.attemptId : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0'));
+	let studentId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'std-' + cleanNim;
 	let quizId = '11111111-1111-1111-1111-111111111111';
 
+	// =========================================================================
+	// 1. SUPABASE PERSISTENCE (PROFILES, QUIZ_ATTEMPTS, ALL 30 ANSWERS)
+	// =========================================================================
+	if (isSupabaseConfigured) {
+		try {
+			// Ensure Quiz row exists
+			await supabaseAdmin.from('quizzes').upsert({
+				id: quizId,
+				title: 'Quiz Kaderisasi Tingkat I HIMA FST UT Bandung',
+				duration_minutes: 60,
+				is_active: true
+			}, { onConflict: 'id' });
+
+			// Upsert Profile
+			const { data: supaProf } = await supabaseAdmin
+				.from('profiles')
+				.upsert(
+					{
+						full_name: cleanName,
+						nim: cleanNim,
+						email: studentEmail,
+						program_studi: cleanProdi,
+						whatsapp: cleanWa,
+						role: 'mahasiswa'
+					},
+					{ onConflict: 'nim' }
+				)
+				.select('id')
+				.maybeSingle();
+
+			if (supaProf && supaProf.id) {
+				studentId = supaProf.id;
+			}
+
+			// Ensure all 30 questions exist in Supabase
+			const supaQuestionRows = OFFICIAL_30_QUESTIONS.map((q) => ({
+				id: resolveQuestionUuid(q.questionNumber),
+				quiz_id: quizId,
+				question_number: q.questionNumber,
+				section: q.section,
+				question_text: q.questionText,
+				correct_answer: q.correctAnswer,
+				explanation: q.explanation || ''
+			}));
+
+			await supabaseAdmin.from('questions').upsert(supaQuestionRows, { onConflict: 'id' });
+
+			// Upsert Attempt to Completed
+			const { data: supaAtt } = await supabaseAdmin
+				.from('quiz_attempts')
+				.upsert(
+					{
+						id: attemptId,
+						quiz_id: quizId,
+						student_id: studentId,
+						status: 'completed',
+						submitted_at: now.toISOString(),
+						score,
+						correct_count: correctCount,
+						wrong_count: wrongCount,
+						total_questions: totalQuestions
+					},
+					{ onConflict: 'id' }
+				)
+				.select('id')
+				.maybeSingle();
+
+			if (supaAtt && supaAtt.id) {
+				attemptId = supaAtt.id;
+			}
+
+			// Upsert all 30 essay answers into Supabase answers table
+			const answersPayload = answersBreakdown.map((item) => ({
+				attempt_id: attemptId,
+				question_id: item.questionId,
+				selected_answer: item.studentAnswer,
+				is_correct: item.isCorrect,
+				answered_at: now.toISOString()
+			}));
+
+			const { error: batchErr } = await supabaseAdmin
+				.from('answers')
+				.upsert(answersPayload, { onConflict: 'attempt_id,question_id' });
+
+			if (batchErr) {
+				console.error('Supabase batch answers upsert error:', batchErr);
+			}
+		} catch (supaErr) {
+			console.error('Supabase REST submit error:', supaErr);
+		}
+	}
+
+	// =========================================================================
+	// 2. PRISMA PERSISTENCE
+	// =========================================================================
 	if (isDatabaseConfigured) {
 		try {
 			let profile = await prisma.profile.findFirst({
@@ -1053,6 +1340,7 @@ export async function submitQuizAttempt(data: {
 			} else {
 				profile = await prisma.profile.create({
 					data: {
+						id: isUuid(studentId) ? studentId : undefined,
 						fullName: cleanName,
 						nim: cleanNim,
 						email: studentEmail,
@@ -1066,8 +1354,8 @@ export async function submitQuizAttempt(data: {
 			studentId = profile.id;
 
 			let targetAttempt: any = null;
-			if (data.attemptId && data.attemptId.includes('-') && data.attemptId.length === 36) {
-				targetAttempt = await prisma.quizAttempt.findUnique({ where: { id: data.attemptId } });
+			if (isUuid(attemptId)) {
+				targetAttempt = await prisma.quizAttempt.findUnique({ where: { id: attemptId } });
 			}
 
 			if (!targetAttempt) {
@@ -1081,6 +1369,7 @@ export async function submitQuizAttempt(data: {
 				let qz = await prisma.quiz.findFirst();
 				targetAttempt = await prisma.quizAttempt.create({
 					data: {
+						id: isUuid(attemptId) ? attemptId : undefined,
 						quizId: qz?.id || quizId,
 						studentId: profile.id,
 						status: 'in_progress',
@@ -1092,26 +1381,13 @@ export async function submitQuizAttempt(data: {
 
 			if (targetAttempt) {
 				attemptId = targetAttempt.id;
-				quizId = targetAttempt.quizId;
-
-				// Fetch database questions to resolve real Question UUIDs
-				const qMap = new Map<number, string>();
-				try {
-					const dbQuestions = await prisma.question.findMany({
-						where: { quizId }
-					});
-					for (const dbq of dbQuestions) {
-						qMap.set(dbq.questionNumber, dbq.id);
-					}
-				} catch (e) {}
 
 				for (const item of answersBreakdown) {
-					const realQId = isUuid(item.questionId) ? item.questionId : qMap.get(item.questionNumber);
-					if (realQId && isUuid(realQId) && isUuid(attemptId)) {
+					if (isUuid(item.questionId) && isUuid(attemptId)) {
 						try {
 							await prisma.answer.upsert({
 								where: {
-									attemptId_questionId: { attemptId, questionId: realQId }
+									attemptId_questionId: { attemptId, questionId: item.questionId }
 								},
 								update: {
 									selectedAnswer: item.studentAnswer || '',
@@ -1120,15 +1396,13 @@ export async function submitQuizAttempt(data: {
 								},
 								create: {
 									attemptId,
-									questionId: realQId,
+									questionId: item.questionId,
 									selectedAnswer: item.studentAnswer || '',
 									isCorrect: item.isCorrect,
 									answeredAt: now
 								}
 							});
-						} catch (ansErr) {
-							console.warn('submitQuizAttempt answer upsert notice:', ansErr);
-						}
+						} catch (ansErr) {}
 					}
 				}
 
@@ -1146,69 +1420,6 @@ export async function submitQuizAttempt(data: {
 			}
 		} catch (prismaErr) {
 			console.warn('Prisma error during submit:', prismaErr);
-		}
-	}
-
-	if (isSupabaseConfigured) {
-		try {
-			const { data: supaProf } = await supabaseAdmin
-				.from('profiles')
-				.upsert(
-					{
-						full_name: cleanName,
-						nim: cleanNim,
-						email: studentEmail,
-						program_studi: cleanProdi,
-						whatsapp: cleanWa,
-						role: 'mahasiswa'
-					},
-					{ onConflict: 'nim' }
-				)
-				.select('id')
-				.maybeSingle();
-
-			if (supaProf) studentId = supaProf.id;
-
-			const { data: supaAtt } = await supabaseAdmin
-				.from('quiz_attempts')
-				.upsert(
-					{
-						id: attemptId.includes('-') && attemptId.length === 36 ? attemptId : undefined,
-						quiz_id: quizId,
-						student_id: studentId,
-						status: 'completed',
-						submitted_at: now.toISOString(),
-						score,
-						correct_count: correctCount,
-						wrong_count: wrongCount,
-						total_questions: totalQuestions
-					},
-					{ onConflict: 'id' }
-				)
-				.select('id')
-				.maybeSingle();
-
-			if (supaAtt) attemptId = supaAtt.id;
-
-			// Insert / upsert essay answers into Supabase answers table
-			for (const item of answersBreakdown) {
-				if (item.questionId && item.questionId.includes('-')) {
-					try {
-						await supabaseAdmin.from('answers').upsert(
-							{
-								attempt_id: attemptId,
-								question_id: item.questionId,
-								selected_answer: item.studentAnswer,
-								is_correct: item.isCorrect,
-								answered_at: now.toISOString()
-							},
-							{ onConflict: 'attempt_id,question_id' }
-						);
-					} catch (ansErr) {}
-				}
-			}
-		} catch (supaErr) {
-			console.warn('Supabase REST submit error:', supaErr);
 		}
 	}
 
@@ -1259,7 +1470,7 @@ export async function submitQuizAttempt(data: {
 }
 
 /**
- * 9. GRADE ESSAY QUIZ ATTEMPT (ADMIN MANUAL EVALUATION)
+ * 10. GRADE ESSAY QUIZ ATTEMPT (ADMIN MANUAL EVALUATION)
  */
 export async function gradeQuizAttempt(data: {
 	attemptId: string;
@@ -1284,8 +1495,7 @@ export async function gradeQuizAttempt(data: {
 		}
 	}
 
-	// 1. Update in Prisma
-	if (isDatabaseConfigured && attemptId.includes('-')) {
+	if (isDatabaseConfigured && isUuid(attemptId)) {
 		try {
 			await prisma.quizAttempt.update({
 				where: { id: attemptId },
@@ -1299,12 +1509,13 @@ export async function gradeQuizAttempt(data: {
 
 			if (questionGrades && questionGrades.length > 0) {
 				for (const q of questionGrades) {
-					if (q.questionId && q.questionId.includes('-')) {
+					const qUuid = resolveQuestionUuid(q.questionId);
+					if (isUuid(qUuid)) {
 						try {
 							await prisma.answer.updateMany({
 								where: {
 									attemptId,
-									questionId: q.questionId
+									questionId: qUuid
 								},
 								data: {
 									isCorrect: q.isCorrect ?? undefined
@@ -1319,8 +1530,7 @@ export async function gradeQuizAttempt(data: {
 		}
 	}
 
-	// 2. Update in Supabase
-	if (isSupabaseConfigured && attemptId.includes('-')) {
+	if (isSupabaseConfigured && isUuid(attemptId)) {
 		try {
 			await supabaseAdmin
 				.from('quiz_attempts')
@@ -1334,7 +1544,8 @@ export async function gradeQuizAttempt(data: {
 
 			if (questionGrades && questionGrades.length > 0) {
 				for (const q of questionGrades) {
-					if (q.questionId && q.questionId.includes('-')) {
+					const qUuid = resolveQuestionUuid(q.questionId);
+					if (isUuid(qUuid)) {
 						try {
 							await supabaseAdmin
 								.from('answers')
@@ -1342,7 +1553,7 @@ export async function gradeQuizAttempt(data: {
 									is_correct: q.isCorrect
 								})
 								.eq('attempt_id', attemptId)
-								.eq('question_id', q.questionId);
+								.eq('question_id', qUuid);
 						} catch (e) {}
 					}
 				}
@@ -1352,7 +1563,6 @@ export async function gradeQuizAttempt(data: {
 		}
 	}
 
-	// 3. Update Memory attempts
 	const memoryAttempts = getMemoryAttempts();
 	const existing = memoryAttempts.find((a) => a.id === attemptId);
 	if (existing) {
@@ -1372,8 +1582,7 @@ export async function gradeQuizAttempt(data: {
 }
 
 /**
- * 10. RECALCULATE & NORMALIZE SINGLE ATTEMPT SCORE
- * Evaluates all 30 multiple choice questions automatically and accurately against the official key.
+ * 11. RECALCULATE SINGLE ATTEMPT SCORE
  */
 export async function recalculateAttemptById(attemptIdOrNim: string) {
 	const detail = await getQuizAttemptById(attemptIdOrNim);
@@ -1395,7 +1604,7 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 		}
 		return {
 			questionNumber: item.questionNumber,
-			questionId: item.question?.id,
+			questionId: resolveQuestionUuid(item.questionNumber),
 			studentAnswer: item.studentAnswer,
 			isCorrect: evalRes.isCorrect,
 			points: evalRes.points
@@ -1406,8 +1615,7 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 	const wrongCount = totalQuestions - correctCount;
 	const score = Math.min(100, Math.round(totalEarnedPoints));
 
-	// 1. Update Prisma
-	if (isDatabaseConfigured && attempt.id.includes('-')) {
+	if (isDatabaseConfigured && isUuid(attempt.id)) {
 		try {
 			await prisma.quizAttempt.update({
 				where: { id: attempt.id },
@@ -1421,7 +1629,7 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 			});
 
 			for (const ans of evaluatedAnswers) {
-				if (ans.questionId && isUuid(ans.questionId)) {
+				if (isUuid(ans.questionId)) {
 					try {
 						await prisma.answer.updateMany({
 							where: {
@@ -1441,8 +1649,7 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 		}
 	}
 
-	// 2. Update Supabase
-	if (isSupabaseConfigured && attempt.id.includes('-')) {
+	if (isSupabaseConfigured && isUuid(attempt.id)) {
 		try {
 			await supabaseAdmin
 				.from('quiz_attempts')
@@ -1456,7 +1663,7 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 				.eq('id', attempt.id);
 
 			for (const ans of evaluatedAnswers) {
-				if (ans.questionId && isUuid(ans.questionId)) {
+				if (isUuid(ans.questionId)) {
 					try {
 						await supabaseAdmin
 							.from('answers')
@@ -1474,7 +1681,6 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 		}
 	}
 
-	// 3. Update Memory attempts
 	const memoryAttempts = getMemoryAttempts();
 	const existing = memoryAttempts.find(
 		(a) => a.id === attempt.id || (attempt.student?.nim && a.student?.nim === attempt.student?.nim)
@@ -1500,7 +1706,7 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 }
 
 /**
- * 11. RECALCULATE ALL ATTEMPTS (ONE-CLICK MASS NORMALIZATION)
+ * 12. RECALCULATE ALL ATTEMPTS
  */
 export async function recalculateAllAttempts() {
 	const allAttempts = await fetchAllRawDataFromDatabase();

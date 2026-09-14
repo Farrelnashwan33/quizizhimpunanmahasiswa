@@ -60,7 +60,7 @@
 	let reviewModalOpen = $state(false);
 	let confirmSubmitOpen = $state(false);
 	let isSubmitting = $state(false);
-	let autoSaveStatus = $state<'saved' | 'saving' | 'idle'>('saved');
+	let autoSaveStatus = $state<'saved' | 'saving' | 'error' | 'idle'>('saved');
 
 	// Quiz Result State
 	let quizResult = $state<any>(null);
@@ -75,7 +75,10 @@
 	// Debounce timer for saving answers
 	let saveTimeout: any = null;
 
-	onMount(() => {
+	onMount(async () => {
+		let loadedAttemptId = '';
+		let loadedNim = '';
+
 		try {
 			const savedResult = localStorage.getItem('quiz_fst_result');
 			if (savedResult) {
@@ -87,11 +90,13 @@
 			const savedAttemptId = localStorage.getItem('quiz_fst_attempt_id');
 			if (savedAttemptId) {
 				attemptId = savedAttemptId;
+				loadedAttemptId = savedAttemptId;
 			}
 			if (savedId) {
 				const parsed = JSON.parse(savedId);
 				studentName = parsed.studentName || '';
 				nim = parsed.nim || '';
+				loadedNim = parsed.nim || '';
 				programStudi = parsed.programStudi || '';
 				whatsapp = parsed.whatsapp || '';
 				if (studentName && nim) {
@@ -110,12 +115,35 @@
 			}
 		} catch (e) {}
 
+		// Fetch and restore saved essay answers from Supabase Database on load/refresh
+		if (loadedAttemptId || loadedNim) {
+			try {
+				const res = await fetch(`/api/quiz/load-attempt?attemptId=${encodeURIComponent(loadedAttemptId)}&nim=${encodeURIComponent(loadedNim)}`);
+				if (res.ok) {
+					const loadData = await res.json();
+					if (loadData.success) {
+						if (loadData.attempt?.id) {
+							attemptId = loadData.attempt.id;
+							try { localStorage.setItem('quiz_fst_attempt_id', attemptId); } catch (e) {}
+						}
+						if (loadData.savedAnswers && Object.keys(loadData.savedAnswers).length > 0) {
+							answers = { ...answers, ...loadData.savedAnswers };
+							try {
+								localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
+							} catch (e) {}
+						}
+					}
+				}
+			} catch (loadErr) {
+				console.warn('Notice: Background attempt recovery check:', loadErr);
+			}
+		}
+
 		// Anti-Cheat & Integrity Handlers
 		let lastViolationTime = 0;
 		const recordTabViolation = () => {
 			if (!isIdentitySubmitted || quizResult || isSubmitting) return;
 			const now = Date.now();
-			// Debounce violation triggers (minimum 1.5s apart to prevent duplicate counts from blur + visibilitychange)
 			if (now - lastViolationTime < 1500) return;
 			lastViolationTime = now;
 
@@ -239,6 +267,13 @@
 					localStorage.setItem('quiz_fst_attempt_id', data.attemptId);
 				} catch (e) {}
 
+				if (data.savedAnswers && Object.keys(data.savedAnswers).length > 0) {
+					answers = { ...answers, ...data.savedAnswers };
+					try {
+						localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
+					} catch (e) {}
+				}
+
 				isIdentitySubmitted = true;
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			} else {
@@ -256,18 +291,20 @@
 	function handleAnswerChange(text: string) {
 		if (!currentQuestion || isSubmitting || quizResult) return;
 		answers[currentQuestion.id] = text;
+		answers[`num_${currentQuestion.questionNumber}`] = text;
+		answers[String(currentQuestion.questionNumber)] = text;
 
 		try {
 			localStorage.setItem('quiz_fst_answers', JSON.stringify(answers));
 		} catch (e) {}
 
-		// Debounce auto-save to database
+		// Debounce auto-save to Supabase database
 		autoSaveStatus = 'saving';
 		if (saveTimeout) clearTimeout(saveTimeout);
 		saveTimeout = setTimeout(async () => {
 			if (attemptId && currentQuestion.id) {
 				try {
-					await fetch('/api/quiz/save-answer', {
+					const res = await fetch('/api/quiz/save-answer', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({
@@ -276,7 +313,11 @@
 							selectedAnswer: text
 						})
 					});
-					autoSaveStatus = 'saved';
+					if (res.ok) {
+						autoSaveStatus = 'saved';
+					} else {
+						autoSaveStatus = 'error';
+					}
 				} catch (err) {
 					autoSaveStatus = 'saved';
 				}
@@ -290,15 +331,15 @@
 
 	function goToQuestion(idx: number) {
 		if (idx >= 0 && idx < totalQuestions) {
-			// Trigger immediate save of current answer before switching
-			if (currentQuestion && attemptId && answers[currentQuestion.id]) {
+			// Trigger immediate flush of current answer to Supabase before switching
+			if (currentQuestion && attemptId && answers[currentQuestion.id] !== undefined) {
 				fetch('/api/quiz/save-answer', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						attemptId,
 						questionId: currentQuestion.id,
-						selectedAnswer: answers[currentQuestion.id]
+						selectedAnswer: answers[currentQuestion.id] || ''
 					})
 				}).catch(() => {});
 			}
@@ -359,7 +400,7 @@
 					});
 				} catch (e) {}
 
-				toasts.success('Jawaban quiz berhasil dikirim!');
+				toasts.success('Jawaban quiz essay berhasil dikirim dan tersimpan di Supabase!');
 				window.scrollTo({ top: 0, behavior: 'smooth' });
 			} else {
 				toasts.error(data.error || 'Gagal mengirim quiz.');
@@ -392,7 +433,7 @@
 						Quiz Kaderisasi HIMA FST UT Bandung
 					</h1>
 					<p class="text-xs sm:text-sm text-slate-600 mt-2">
-						Uji Pemahaman, Bangun Karakter, dan Siap Berkontribusi (30 Soal Pilihan Ganda)
+						Uji Pemahaman, Bangun Karakter, dan Siap Berkontribusi (30 Soal Essay)
 					</p>
 				</div>
 
@@ -455,16 +496,16 @@
 
 						<div class="pt-4">
 							<Button type="submit" variant="primary" size="lg" fullWidth loading={isStarting} class="shadow-lg shadow-emerald-600/30 font-bold">
-								<span>Mulai Mengerjakan (30 Soal Pilihan Ganda)</span>
+								<span>Mulai Mengerjakan (30 Soal Essay)</span>
 								<ArrowRight class="w-5 h-5 ml-2" />
 							</Button>
 						</div>
 					</form>
 
 					<div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-						<span>30 Soal Pilihan Ganda</span>
+						<span>30 Soal Essay</span>
 						<span>•</span>
-						<span>Autosave Aktif</span>
+						<span>Autosave Supabase Aktif</span>
 						<span>•</span>
 						<span>HIMA FST UT Bandung</span>
 					</div>
@@ -472,7 +513,7 @@
 			</div>
 		</div>
 
-	<!-- STATE 2: MENGERJAKAN 30 SOAL PILIHAN GANDA -->
+	<!-- STATE 2: MENGERJAKAN 30 SOAL ESSAY -->
 	{:else if !quizResult}
 		<!-- Sticky Quiz Header -->
 		<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 shadow-xs">
@@ -513,7 +554,7 @@
 							<span class="text-amber-700">Menyimpan...</span>
 						{:else}
 							<CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
-							<span>Tersimpan</span>
+							<span>Tersimpan di Supabase</span>
 						{/if}
 					</div>
 
@@ -541,7 +582,7 @@
 				<!-- Left/Center: Question Card (3 Cols) -->
 				<div class="lg:col-span-3 space-y-6">
 					{#if currentQuestion}
-						{@const currentAnswer = answers[currentQuestion.id] || ''}
+						{@const currentAnswer = answers[currentQuestion.id] || answers[`num_${currentQuestion.questionNumber}`] || ''}
 
 						<Card glass padding="lg" class="shadow-md border-slate-200">
 							<!-- Header -->
@@ -556,7 +597,7 @@
 								</div>
 								<div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
 									<PenLine class="w-3.5 h-3.5 text-emerald-600" />
-									<span>Pilihan Ganda</span>
+									<span>Soal Essay</span>
 								</div>
 							</div>
 
@@ -595,7 +636,7 @@
 								<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
 									<span class="flex items-center gap-1.5 text-emerald-700">
 										<Save class="w-3.5 h-3.5 text-emerald-600" />
-										Jawaban essay tersimpan otomatis saat mengetik dan berpindah nomor soal.
+										Jawaban tersimpan otomatis ke Supabase saat mengetik dan berpindah nomor soal.
 									</span>
 									<span class="{(currentAnswer || '').trim().length >= 15 ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
 										{(currentAnswer || '').trim().length >= 15 ? '✓ Uraian Terisi' : (currentAnswer ? 'Tulis lebih lengkap' : 'Belum diisi')}
@@ -655,7 +696,7 @@
 
 						<div class="grid grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
 							{#each questions as q, idx}
-								{@const ans = answers[q.id]}
+								{@const ans = answers[q.id] || answers[`num_${q.questionNumber}`] || answers[String(q.questionNumber)]}
 								{@const isAns = ans && typeof ans === 'string' && ans.trim().length > 0}
 								{@const isCurr = idx === currentIndex}
 								<button
@@ -878,7 +919,7 @@
 <Modal bind:open={reviewModalOpen} title="Review Jawaban (30 Butir Soal)" maxWidth="xl">
 	<div class="space-y-4">
 		<p class="text-xs text-slate-600">
-			Periksa kelengkapan jawaban pilihan ganda Anda untuk masing-masing butir soal sebelum mengirim kuis.
+			Periksa kelengkapan jawaban essay Anda untuk masing-masing butir soal sebelum mengirim kuis.
 		</p>
 
 		<div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs font-semibold">
@@ -888,7 +929,7 @@
 
 		<div class="grid grid-cols-6 sm:grid-cols-10 gap-2 max-h-[300px] overflow-y-auto p-1">
 			{#each questions as q, idx}
-				{@const ans = answers[q.id]}
+				{@const ans = answers[q.id] || answers[`num_${q.questionNumber}`] || answers[String(q.questionNumber)]}
 				{@const isAns = ans && typeof ans === 'string' && ans.trim().length > 0}
 				<button
 					type="button"
@@ -897,7 +938,7 @@
 				>
 					<span class="block text-xs font-bold">{idx + 1}</span>
 					<span class="block text-[10px] font-mono mt-0.5 {isAns ? 'font-bold text-emerald-700' : 'text-rose-500'}">
-						{isAns ? ans : '-'}
+						{isAns ? '✓' : '-'}
 					</span>
 				</button>
 			{/each}

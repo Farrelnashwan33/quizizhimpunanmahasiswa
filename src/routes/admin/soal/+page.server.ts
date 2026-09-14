@@ -106,6 +106,8 @@ export const actions: Actions = {
 		const optionD = (formData.get('optionD') as string)?.trim() || '-';
 		const correctAnswer = (formData.get('correctAnswer') as string)?.trim() || '';
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
+		const rawNum = formData.get('questionNumber');
+		const questionNumber = rawNum ? parseInt(rawNum as string, 10) : (target?.questionNumber || 1);
 
 		if (!id || !section || !questionText || !correctAnswer) {
 			return fail(400, { error: 'ID, kategori, pertanyaan essay, dan kunci jawaban referensi wajib diisi.' });

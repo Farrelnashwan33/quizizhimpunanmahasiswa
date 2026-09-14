@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			whatsapp
 		});
 
-		// Return sanitized questions (no correctAnswer exposed)
+		// Return sanitized questions (no correctAnswer or explanation exposed)
 		const sanitizedQuestions = OFFICIAL_30_QUESTIONS.map((q) => ({
 			id: q.id,
 			questionNumber: q.questionNumber,
@@ -42,6 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			nim: result.nim,
 			programStudi: result.programStudi,
 			startedAt: result.startedAt,
+			savedAnswers: result.savedAnswers || {},
 			questions: sanitizedQuestions,
 			totalQuestions: sanitizedQuestions.length
 		});
@@ -53,4 +54,3 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 	}
 };
-

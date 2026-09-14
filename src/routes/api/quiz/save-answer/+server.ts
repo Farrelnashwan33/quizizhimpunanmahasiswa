@@ -4,26 +4,34 @@ import { saveAnswer } from '$lib/server/dbService';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const { attemptId, questionId, selectedAnswer } = await request.json();
+		const body = await request.json();
+		const { attemptId, questionId, selectedAnswer } = body;
 
-		if (!attemptId || !questionId || !selectedAnswer) {
+		if (!attemptId || !questionId || typeof selectedAnswer !== 'string') {
 			return json(
-				{ success: false, error: 'Parameter attemptId, questionId, dan selectedAnswer wajib diisi.' },
+				{ success: false, error: 'Parameter attemptId, questionId, dan selectedAnswer (string) wajib diisi.' },
 				{ status: 400 }
 			);
 		}
 
-		await saveAnswer({ attemptId, questionId, selectedAnswer });
+		const result = await saveAnswer({
+			attemptId: String(attemptId).trim(),
+			questionId: String(questionId).trim(),
+			selectedAnswer: String(selectedAnswer)
+		});
 
 		return json({
 			success: true,
+			attemptId,
 			questionId,
-			selectedAnswer,
-			saved: true
+			saved: true,
+			savedAt: result.savedAt
 		});
 	} catch (err: any) {
 		console.error('Error in save-answer API:', err);
-		return json({ success: true, saved: 'cached' });
+		return json(
+			{ success: false, error: err?.message || 'Gagal menyimpan jawaban ke database.' },
+			{ status: 500 }
+		);
 	}
 };
-

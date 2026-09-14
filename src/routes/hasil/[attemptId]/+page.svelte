@@ -211,32 +211,37 @@
 						{q?.questionText}
 					</p>
 
-					<!-- Options preview if present -->
-					{#if q?.optionA || q?.optionB || q?.optionC || q?.optionD}
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3">
-							{#each [{ key: 'A', text: q.optionA }, { key: 'B', text: q.optionB }, { key: 'C', text: q.optionC }, { key: 'D', text: q.optionD }] as opt}
-								{@const isUserPick = studentText === opt.key}
-								{@const isCorrectKey = q.correctAnswer === opt.key}
-								<div class="p-2.5 rounded-xl border flex items-start gap-2 {isCorrectKey ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950 font-medium' : isUserPick ? 'bg-rose-100/70 border-rose-300 text-rose-950 font-medium' : 'bg-white border-slate-200 text-slate-700'}">
-									<span class="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 {isCorrectKey ? 'bg-emerald-600 text-white' : isUserPick ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-700'}">
-										{opt.key}
-									</span>
-									<span class="pt-0.5 leading-snug">{opt.text}</span>
-								</div>
-							{/each}
+					<!-- Student Essay Answer -->
+					<div class="p-3.5 rounded-xl border mb-2 {isCorrect ? 'bg-emerald-100/50 border-emerald-300 text-emerald-950' : isAnswered ? 'bg-amber-50/60 border-amber-300 text-amber-950' : 'bg-rose-50 border-rose-200 text-rose-900'}">
+						<div class="flex items-center justify-between text-[11px] font-bold mb-1">
+							<span class="{isCorrect ? 'text-emerald-800' : isAnswered ? 'text-amber-800' : 'text-rose-700'}">
+								Jawaban Uraian Anda:
+							</span>
+							<span class="text-[10px] text-slate-500">
+								{studentText ? `${studentText.trim().split(/\s+/).filter(Boolean).length} kata` : 'Kosong'}
+							</span>
 						</div>
-					{/if}
+						<p class="text-xs sm:text-sm whitespace-pre-line leading-relaxed">
+							{studentText || 'Tidak ada jawaban tertulis.'}
+						</p>
+					</div>
 
 					<!-- Official answer key & Explanation -->
 					{#if q?.correctAnswer}
-						<div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs text-emerald-950 mb-2">
-							<strong class="text-emerald-900">Kunci Jawaban Resmi:</strong> Opsi <strong>{q.correctAnswer}</strong>
+						<div class="p-3.5 bg-emerald-900/10 rounded-xl border border-emerald-300/80 text-xs text-emerald-950 mb-2">
+							<div class="flex items-center gap-1.5 text-emerald-900 font-bold mb-1">
+								<Award class="w-3.5 h-3.5 text-emerald-700" />
+								<span>Referensi Jawaban Resmi:</span>
+							</div>
+							<p class="text-xs sm:text-sm whitespace-pre-line leading-relaxed text-emerald-950 font-medium">
+								{q.correctAnswer}
+							</p>
 						</div>
 					{/if}
 
 					{#if q?.explanation}
 						<div class="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-600">
-							<strong class="text-emerald-800">Pembahasan:</strong> {q.explanation}
+							<strong class="text-emerald-800">Pembahasan & Rubrik:</strong> {q.explanation}
 						</div>
 					{/if}
 				</Card>

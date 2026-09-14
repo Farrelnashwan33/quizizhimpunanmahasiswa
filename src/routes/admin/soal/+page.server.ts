@@ -59,15 +59,15 @@ export const actions: Actions = {
 		const questionNumber = parseInt(formData.get('questionNumber') as string, 10);
 		const section = (formData.get('section') as string)?.trim();
 		const questionText = (formData.get('questionText') as string)?.trim();
-		const optionA = (formData.get('optionA') as string)?.trim() || '';
-		const optionB = (formData.get('optionB') as string)?.trim() || '';
-		const optionC = (formData.get('optionC') as string)?.trim() || '';
-		const optionD = (formData.get('optionD') as string)?.trim() || '';
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim()?.toUpperCase() || 'A';
+		const optionA = (formData.get('optionA') as string)?.trim() || '-';
+		const optionB = (formData.get('optionB') as string)?.trim() || '-';
+		const optionC = (formData.get('optionC') as string)?.trim() || '-';
+		const optionD = (formData.get('optionD') as string)?.trim() || '-';
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim() || 'Jawaban essay tertera pada panduan kunci.';
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
 
-		if (!quizId || isNaN(questionNumber) || !section || !questionText || !optionA || !optionB || !optionC || !optionD || !['A', 'B', 'C', 'D'].includes(correctAnswer)) {
-			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, seluruh opsi A-D, dan kunci jawaban wajib diisi.' });
+		if (!quizId || isNaN(questionNumber) || !section || !questionText || !correctAnswer) {
+			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan essay, dan referensi jawaban wajib diisi.' });
 		}
 
 		try {
@@ -88,7 +88,7 @@ export const actions: Actions = {
 				});
 			}
 
-			return { success: true, message: 'Soal pilihan ganda berhasil ditambahkan.' };
+			return { success: true, message: 'Soal essay berhasil ditambahkan.' };
 		} catch (err: any) {
 			console.error('Error creating question:', err);
 			return fail(500, { error: err?.message || 'Gagal menambahkan soal.' });
@@ -98,24 +98,22 @@ export const actions: Actions = {
 	update: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
-		const questionNumber = parseInt(formData.get('questionNumber') as string, 10);
 		const section = (formData.get('section') as string)?.trim();
 		const questionText = (formData.get('questionText') as string)?.trim();
-		const optionA = (formData.get('optionA') as string)?.trim() || '';
-		const optionB = (formData.get('optionB') as string)?.trim() || '';
-		const optionC = (formData.get('optionC') as string)?.trim() || '';
-		const optionD = (formData.get('optionD') as string)?.trim() || '';
-		const correctAnswer = (formData.get('correctAnswer') as string)?.trim()?.toUpperCase() || 'A';
+		const optionA = (formData.get('optionA') as string)?.trim() || '-';
+		const optionB = (formData.get('optionB') as string)?.trim() || '-';
+		const optionC = (formData.get('optionC') as string)?.trim() || '-';
+		const optionD = (formData.get('optionD') as string)?.trim() || '-';
+		const correctAnswer = (formData.get('correctAnswer') as string)?.trim() || '';
 		const explanation = (formData.get('explanation') as string)?.trim() || null;
 
-		if (!id || isNaN(questionNumber) || !section || !questionText || !optionA || !optionB || !optionC || !optionD || !['A', 'B', 'C', 'D'].includes(correctAnswer)) {
-			return fail(400, { error: 'Kategori, nomor soal, teks pertanyaan, seluruh opsi A-D, dan kunci jawaban wajib diisi.' });
+		if (!id || !section || !questionText || !correctAnswer) {
+			return fail(400, { error: 'ID, kategori, pertanyaan essay, dan kunci jawaban referensi wajib diisi.' });
 		}
 
 		// Update in-memory
 		const target = OFFICIAL_30_QUESTIONS.find((q) => q.id === id || String(q.questionNumber) === id);
 		if (target) {
-			target.questionNumber = questionNumber;
 			target.section = section;
 			target.questionText = questionText;
 			target.optionA = optionA;

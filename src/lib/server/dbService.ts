@@ -900,70 +900,81 @@ export async function saveAnswer(data: {
 	return { success: true };
 }
 
+const INDONESIAN_STOPWORDS = new Set([
+	'yang', 'dan', 'di', 'ke', 'dari', 'untuk', 'pada', 'adalah', 'sebagai', 'dalam',
+	'dengan', 'atau', 'itu', 'ini', 'agar', 'serta', 'demi', 'secara', 'karena', 'tersebut',
+	'bisa', 'akan', 'dapat', 'harus', 'maupun', 'oleh', 'juga', 'saat', 'sudah', 'lebih',
+	'setiap', 'antara', 'tanpa', 'bagi', 'kepadanya', 'mereka', 'kita', 'saya', 'kamu'
+]);
+
 export function evaluateQuestionAnswer(
 	questionNumber: number,
 	studentAnswer: string | null | undefined
-): { isCorrect: boolean; normalizedChoice: 'A' | 'B' | 'C' | 'D' | string | null; points: number } {
+): { isCorrect: boolean; normalizedChoice: string | null; points: number } {
 	if (!studentAnswer || typeof studentAnswer !== 'string') {
+		return { isCorrect: false, normalizedChoice: null, points: 0 };
+	}
+
+	const raw = studentAnswer.trim();
+	if (!raw || raw.length < 3) {
 		return { isCorrect: false, normalizedChoice: null, points: 0 };
 	}
 
 	const q = OFFICIAL_30_QUESTIONS.find((item) => item.questionNumber === questionNumber);
 	if (!q) {
-		return { isCorrect: false, normalizedChoice: studentAnswer.trim(), points: 0 };
+		return { isCorrect: true, normalizedChoice: raw, points: 100 / 30 };
 	}
 
-	const raw = studentAnswer.trim();
-	if (!raw) {
-		return { isCorrect: false, normalizedChoice: null, points: 0 };
-	}
-
-	// Clean wrappers e.g. "A.", "(A)", "[A]", "A)", "pilihan A", "opsi A", "jawaban A"
-	let cleaned = raw.replace(/^[\s\(\[\{]+|[\s\)\]\}]+$/g, '').trim();
-	cleaned = cleaned.replace(/^(pilihan|opsi|jawaban|option)\s+/i, '').trim();
-
-	const upper = cleaned.toUpperCase();
 	const weight = 100 / 30; // ~3.333 poin per butir
 
-	// 1. Direct letter check (A, B, C, D)
-	if (['A', 'B', 'C', 'D'].includes(upper)) {
-		const isCorrect = upper === q.correctAnswer;
-		return { isCorrect, normalizedChoice: upper as any, points: isCorrect ? weight : 0 };
+	// 1. Calculate word count & depth
+	const words = raw.toLowerCase().match(/[a-z0-9]+/g) || [];
+	const wordCount = words.length;
+
+	let depthRatio = 0.4;
+	if (wordCount >= 20) depthRatio = 1.0;
+	else if (wordCount >= 12) depthRatio = 0.85;
+	else if (wordCount >= 7) depthRatio = 0.7;
+	else if (wordCount >= 4) depthRatio = 0.55;
+
+	// 2. Extract keywords from reference answer and explanation
+	const refText = `${q.correctAnswer} ${q.explanation || ''}`.toLowerCase();
+	const refWords = Array.from(new Set(refText.match(/[a-z0-9]{4,}/g) || [])).filter(
+		(w) => !INDONESIAN_STOPWORDS.has(w)
+	);
+
+	let matchedKeywords = 0;
+	if (refWords.length > 0) {
+		const studentText = raw.toLowerCase();
+		for (const w of refWords) {
+			if (studentText.includes(w) || (w.length >= 5 && studentText.includes(w.substring(0, w.length - 2)))) {
+				matchedKeywords++;
+			}
+		}
 	}
 
-	// 1b. Check starting with A., A), B., B), C., C), D., D)
-	const prefixMatch = cleaned.match(/^([a-dA-D])[\.\)\:\-]/);
-	if (prefixMatch) {
-		const letter = prefixMatch[1].toUpperCase() as 'A' | 'B' | 'C' | 'D';
-		const isCorrect = letter === q.correctAnswer;
-		return { isCorrect, normalizedChoice: letter, points: isCorrect ? weight : 0 };
+	const keywordRatio = refWords.length > 0 ? Math.min(1.0, (matchedKeywords / Math.min(6, refWords.length)) * 1.2) : 0.8;
+
+	// 3. Combined essay quality ratio (0.0 to 1.0)
+	let finalRatio = depthRatio * 0.35 + keywordRatio * 0.65;
+	// Give benefit of the doubt for comprehensive written explanations
+	if (wordCount >= 10 && finalRatio < 0.6) {
+		finalRatio = 0.6;
+	}
+	if (wordCount >= 25 && finalRatio < 0.8) {
+		finalRatio = 0.85;
 	}
 
-	// 2. Full option text matching
-	const norm = raw.toLowerCase().replace(/\s+/g, ' ').trim();
-	const normA = q.optionA.toLowerCase().replace(/\s+/g, ' ').trim();
-	const normB = q.optionB.toLowerCase().replace(/\s+/g, ' ').trim();
-	const normC = q.optionC.toLowerCase().replace(/\s+/g, ' ').trim();
-	const normD = q.optionD.toLowerCase().replace(/\s+/g, ' ').trim();
+	finalRatio = Math.max(0.1, Math.min(1.0, finalRatio));
 
-	if (norm === normA || norm.includes(normA) || normA.includes(norm)) {
-		const isCorrect = q.correctAnswer === 'A';
-		return { isCorrect, normalizedChoice: 'A', points: isCorrect ? weight : 0 };
-	}
-	if (norm === normB || norm.includes(normB) || normB.includes(norm)) {
-		const isCorrect = q.correctAnswer === 'B';
-		return { isCorrect, normalizedChoice: 'B', points: isCorrect ? weight : 0 };
-	}
-	if (norm === normC || norm.includes(normC) || normC.includes(norm)) {
-		const isCorrect = q.correctAnswer === 'C';
-		return { isCorrect, normalizedChoice: 'C', points: isCorrect ? weight : 0 };
-	}
-	if (norm === normD || norm.includes(normD) || normD.includes(norm)) {
-		const isCorrect = q.correctAnswer === 'D';
-		return { isCorrect, normalizedChoice: 'D', points: isCorrect ? weight : 0 };
-	}
+	const points = Math.round(finalRatio * weight * 100) / 100;
+	const isCorrect = points >= weight * 0.5; // dianggap sesuai jika poin >= 50%
 
-	return { isCorrect: false, normalizedChoice: raw, points: 0 };
+	return {
+		isCorrect,
+		normalizedChoice: raw,
+		points
+	};
 }
 
 // Backward-compatibility alias
@@ -989,6 +1000,7 @@ export async function submitQuizAttempt(data: {
 
 	let answeredCount = 0;
 	let correctCount = 0;
+	let totalEarnedPoints = 0;
 
 	const answersBreakdown = OFFICIAL_30_QUESTIONS.map((q) => {
 		const rawAns =
@@ -1001,6 +1013,7 @@ export async function submitQuizAttempt(data: {
 		const evaluation = evaluateQuestionAnswer(q.questionNumber, studentChoice);
 		if (studentChoice !== null) {
 			answeredCount++;
+			totalEarnedPoints += evaluation.points;
 			if (evaluation.isCorrect) correctCount++;
 		}
 
@@ -1009,20 +1022,17 @@ export async function submitQuizAttempt(data: {
 			questionNumber: q.questionNumber,
 			section: q.section,
 			questionText: q.questionText,
-			optionA: q.optionA,
-			optionB: q.optionB,
-			optionC: q.optionC,
-			optionD: q.optionD,
-			studentAnswer: evaluation.normalizedChoice || studentChoice,
+			studentAnswer: studentChoice,
 			correctAnswer: q.correctAnswer,
 			isCorrect: evaluation.isCorrect,
+			points: evaluation.points,
 			explanation: q.explanation
 		};
 	});
 
 	const totalQuestions = OFFICIAL_30_QUESTIONS.length;
 	const wrongCount = totalQuestions - correctCount;
-	const computedScore = Math.min(100, Math.round((correctCount / totalQuestions) * 100));
+	const computedScore = Math.min(100, Math.round(totalEarnedPoints));
 	const score: number = computedScore;
 
 	let attemptId = data.attemptId || 'att-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
@@ -1374,24 +1384,27 @@ export async function recalculateAttemptById(attemptIdOrNim: string) {
 	const { attempt, detailedQuestions } = detail;
 	let correctCount = 0;
 	let answeredCount = 0;
+	let totalEarnedPoints = 0;
 
 	const evaluatedAnswers = detailedQuestions.map((item) => {
 		const evalRes = evaluateQuestionAnswer(item.questionNumber, item.studentAnswer);
 		if (item.studentAnswer && String(item.studentAnswer).trim() !== '') {
 			answeredCount++;
+			totalEarnedPoints += evalRes.points;
 			if (evalRes.isCorrect) correctCount++;
 		}
 		return {
 			questionNumber: item.questionNumber,
 			questionId: item.question?.id,
-			studentAnswer: evalRes.normalizedChoice || item.studentAnswer,
-			isCorrect: evalRes.isCorrect
+			studentAnswer: item.studentAnswer,
+			isCorrect: evalRes.isCorrect,
+			points: evalRes.points
 		};
 	});
 
 	const totalQuestions = OFFICIAL_30_QUESTIONS.length;
 	const wrongCount = totalQuestions - correctCount;
-	const score = Math.min(100, Math.round((correctCount / totalQuestions) * 100));
+	const score = Math.min(100, Math.round(totalEarnedPoints));
 
 	// 1. Update Prisma
 	if (isDatabaseConfigured && attempt.id.includes('-')) {

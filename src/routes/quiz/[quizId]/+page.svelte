@@ -151,12 +151,12 @@
 	);
 	const isAllAnswered = $derived(answeredCount === totalQuestions);
 
-	// Handle multiple-choice option selection with autosave
-	function handleSelectOption(optionLetter: string) {
+	// Handle essay answer change with autosave
+	function handleAnswerChange(text: string) {
 		if (!currentQuestion || isSubmitting) return;
 
 		const qId = currentQuestion.id;
-		answers[qId] = optionLetter;
+		answers[qId] = text;
 		savingStatus = 'saving';
 
 		if (saveTimeout) clearTimeout(saveTimeout);
@@ -168,7 +168,7 @@
 					body: JSON.stringify({
 						attemptId: attempt.id,
 						questionId: qId,
-						selectedAnswer: optionLetter
+						selectedAnswer: text
 					})
 				});
 
@@ -180,8 +180,10 @@
 			} catch (err) {
 				savingStatus = 'error';
 			}
-		}, 300);
+		}, 400);
 	}
+
+	const handleSelectOption = handleAnswerChange;
 
 	function goToQuestion(idx: number) {
 		if (idx >= 0 && idx < totalQuestions) {
@@ -356,42 +358,35 @@
 							</p>
 						</div>
 
-						<!-- Multiple Choice Options (A, B, C, D) -->
+						<!-- Essay Answer Textarea -->
 						<div class="space-y-3">
-							<p class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-								Pilih Salah Satu Jawaban:
-							</p>
-
-							<div class="grid grid-cols-1 gap-3">
-								{#each [
-									{ key: 'A', text: currentQuestion.optionA },
-									{ key: 'B', text: currentQuestion.optionB },
-									{ key: 'C', text: currentQuestion.optionC },
-									{ key: 'D', text: currentQuestion.optionD }
-								] as opt}
-									{@const isSelected = currentAnswer === opt.key}
-									<button
-										type="button"
-										onclick={() => handleSelectOption(opt.key)}
-										class="w-full text-left p-4 rounded-2xl border-2 transition-all duration-150 flex items-start gap-3.5 cursor-pointer {isSelected ? 'border-emerald-600 bg-emerald-50/80 shadow-sm ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}"
-									>
-										<div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors {isSelected ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
-											{opt.key}
-										</div>
-										<div class="flex-1 pt-1 text-sm sm:text-base {isSelected ? 'font-semibold text-emerald-950' : 'text-slate-800'} leading-relaxed">
-											{opt.text}
-										</div>
-									</button>
-								{/each}
+							<div class="flex items-center justify-between">
+								<label for="quizid-essay-textarea" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+									Tuliskan Jawaban Uraian Anda:
+								</label>
+								<span class="text-xs font-medium text-slate-500">
+									{(currentAnswer || '').trim().split(/\s+/).filter(Boolean).length} Kata • {(currentAnswer || '').length} Karakter
+								</span>
 							</div>
 
-							<div class="flex items-center justify-between text-[11px] text-slate-500 pt-2">
-								<span class="flex items-center gap-1 text-emerald-700">
-									<Save class="w-3 h-3 text-emerald-600" />
-									Autosave aktif: jawaban tersimpan otomatis saat Anda memilih opsi.
+							<div class="relative">
+								<textarea
+									id="quizid-essay-textarea"
+									rows="7"
+									placeholder="Ketikkan uraian dan penjelasan jawaban Anda di sini secara lengkap, jelas, dan beretika..."
+									value={currentAnswer || ''}
+									oninput={(e) => handleAnswerChange((e.target as HTMLTextAreaElement).value)}
+									class="w-full bg-slate-50/70 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-500 rounded-2xl p-4 text-slate-900 text-sm sm:text-base leading-relaxed outline-none transition-all resize-y shadow-inner"
+								></textarea>
+							</div>
+
+							<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+								<span class="flex items-center gap-1.5 text-emerald-700">
+									<Save class="w-3.5 h-3.5 text-emerald-600" />
+									Autosave aktif: jawaban tersimpan otomatis saat mengetik dan berpindah nomor soal.
 								</span>
-								<span class="{currentAnswer ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
-									{currentAnswer ? `✓ Pilihan: Opsi ${currentAnswer}` : 'Belum dipilih'}
+								<span class="{(currentAnswer || '').trim().length >= 15 ? 'text-emerald-600 font-bold' : 'text-slate-400'}">
+									{(currentAnswer || '').trim().length >= 15 ? '✓ Uraian Terisi' : (currentAnswer ? 'Tulis lebih lengkap' : 'Belum diisi')}
 								</span>
 							</div>
 						</div>

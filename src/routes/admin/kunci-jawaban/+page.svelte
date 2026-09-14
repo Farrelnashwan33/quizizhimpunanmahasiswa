@@ -44,10 +44,10 @@
 				<span class="text-xs text-slate-400">30 Butir Soal Pilihan Ganda</span>
 			</div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-				Kunci Jawaban Resmi Quiz
+				Daftar Master Kunci Jawaban Essay (1–30)
 			</h1>
 			<p class="text-xs sm:text-sm text-slate-400 mt-1">
-				Tabel ringkas pedoman kunci jawaban pilihan ganda (A/B/C/D) dan pembahasan untuk setiap butir soal.
+				Tabel pedoman referensi kunci jawaban essay (uraian deskriptif) dan pembahasan untuk setiap butir soal.
 			</p>
 		</div>
 	</div>
@@ -56,7 +56,7 @@
 	<div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-start gap-3 text-xs text-slate-400">
 		<ShieldAlert class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
 		<span>
-			Kunci jawaban dienkripsi dan hanya dapat diakses oleh admin pengurus. Mengubah kunci jawaban di sini akan memperbarui basis data referensi penilaian evaluasi otomatis mahasiswa.
+			Kunci jawaban essay ini menjadi basis referensi sistem penilaian evaluasi otomatis kuis mahasiswa serta panduan pengurus dalam mereview lembar jawaban essay.
 		</span>
 	</div>
 
@@ -66,48 +66,37 @@
 			<table class="w-full text-left text-xs text-slate-300">
 				<thead class="bg-slate-850 text-slate-400 uppercase tracking-wider text-[11px] font-bold border-b border-slate-800">
 					<tr>
-						<th class="py-3.5 px-4 w-14">No</th>
-						<th class="py-3.5 px-4 w-40">Kategori</th>
-						<th class="py-3.5 px-4 min-w-[240px]">Pertanyaan & Opsi</th>
-						<th class="py-3.5 px-4 min-w-[140px]">Kunci Resmi</th>
-						<th class="py-3.5 px-4 min-w-[220px]">Pembahasan Singkat</th>
+						<th class="py-3.5 px-4 w-12 text-center">No</th>
+						<th class="py-3.5 px-4 w-44">Kategori</th>
+						<th class="py-3.5 px-4 min-w-[260px]">Pertanyaan Essay</th>
+						<th class="py-3.5 px-4 min-w-[320px]">Kunci Referensi Jawaban Essay</th>
+						<th class="py-3.5 px-4 min-w-[240px]">Pembahasan & Rubrik</th>
 						<th class="py-3.5 px-4 w-20 text-center">Aksi</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-800/80">
 					{#each questions as q}
 						<tr class="hover:bg-slate-800/40 transition-colors">
-							<td class="py-3.5 px-4 font-mono font-bold text-white align-top">
+							<td class="py-3.5 px-4 font-mono font-bold text-white align-top text-center">
 								{q.questionNumber}
 							</td>
 							<td class="py-3.5 px-4 font-medium text-emerald-400 align-top">
-								{q.section}
+								<Badge variant="emerald" size="sm">{q.section}</Badge>
 							</td>
 							<td class="py-3.5 px-4 text-slate-200 align-top space-y-2">
-								<p class="leading-relaxed font-semibold">{q.questionText}</p>
-								<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] pt-1">
-									<div class="p-1.5 rounded-lg border {q.correctAnswer === 'A' ? 'bg-emerald-950/60 border-emerald-700 text-emerald-300 font-bold' : 'bg-slate-850/60 border-slate-800 text-slate-400'}">
-										<span class="font-bold">A.</span> {q.optionA}
-									</div>
-									<div class="p-1.5 rounded-lg border {q.correctAnswer === 'B' ? 'bg-emerald-950/60 border-emerald-700 text-emerald-300 font-bold' : 'bg-slate-850/60 border-slate-800 text-slate-400'}">
-										<span class="font-bold">B.</span> {q.optionB}
-									</div>
-									<div class="p-1.5 rounded-lg border {q.correctAnswer === 'C' ? 'bg-emerald-950/60 border-emerald-700 text-emerald-300 font-bold' : 'bg-slate-850/60 border-slate-800 text-slate-400'}">
-										<span class="font-bold">C.</span> {q.optionC}
-									</div>
-									<div class="p-1.5 rounded-lg border {q.correctAnswer === 'D' ? 'bg-emerald-950/60 border-emerald-700 text-emerald-300 font-bold' : 'bg-slate-850/60 border-slate-800 text-slate-400'}">
-										<span class="font-bold">D.</span> {q.optionD}
-									</div>
-								</div>
+								<p class="leading-relaxed font-semibold text-white">{q.questionText}</p>
 							</td>
 							<td class="py-3.5 px-4 align-top">
-								<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950 border border-emerald-700 text-emerald-300 font-bold text-sm shadow-xs">
-									<KeyRound class="w-3.5 h-3.5 text-emerald-400" />
-									<span>Opsi {q.correctAnswer}</span>
+								<div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/50 text-emerald-200 text-xs leading-relaxed font-medium">
+									<div class="flex items-center gap-1.5 text-emerald-400 font-bold mb-1.5 text-[11px] uppercase tracking-wide">
+										<KeyRound class="w-3.5 h-3.5" />
+										<span>Referensi Jawaban Resmi</span>
+									</div>
+									<p class="whitespace-pre-line">{q.correctAnswer}</p>
 								</div>
 							</td>
 							<td class="py-3.5 px-4 text-slate-400 align-top">
-								<div class="p-2.5 rounded-xl bg-slate-850/60 border border-slate-800 text-slate-300 text-xs leading-relaxed">
+								<div class="p-3 rounded-xl bg-slate-850/70 border border-slate-800 text-slate-300 text-xs leading-relaxed">
 									{q.explanation || '-'}
 								</div>
 							</td>
@@ -116,7 +105,7 @@
 									type="button"
 									onclick={() => openEditModal(q)}
 									class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-									title="Edit Kunci Jawaban & Pembahasan"
+									title="Edit Kunci Jawaban Essay & Pembahasan"
 								>
 									<Edit3 class="w-3.5 h-3.5" />
 									<span>Edit</span>
@@ -132,7 +121,7 @@
 
 <!-- Edit Kunci Jawaban Modal -->
 {#if editingQuestion}
-	<Modal bind:open={editModalOpen} title={`Edit Kunci Jawaban Soal #${editingQuestion.questionNumber}`} maxWidth="lg">
+	<Modal bind:open={editModalOpen} title={`Edit Referensi Kunci Jawaban Soal #${editingQuestion.questionNumber}`} maxWidth="lg">
 		<form
 			action="?/updateKey"
 			method="POST"
@@ -142,7 +131,7 @@
 					isSaving = false;
 					if (result.type === 'success') {
 						editModalOpen = false;
-						toasts.success(`Kunci jawaban soal #${editingQuestion.questionNumber} berhasil diperbarui.`);
+						toasts.success(`Referensi kunci jawaban soal #${editingQuestion.questionNumber} berhasil diperbarui.`);
 					} else {
 						toasts.error('Gagal memperbarui kunci jawaban.');
 					}
@@ -158,47 +147,41 @@
 				<p class="text-slate-200 leading-relaxed font-semibold">{editingQuestion.questionText}</p>
 			</div>
 
-			<div class="space-y-2">
-				<label class="block text-xs font-bold text-slate-200">
-					Pilih Opsi Kunci Jawaban Benar:
-				</label>
-				<div class="grid grid-cols-2 gap-2">
-					{#each ['A', 'B', 'C', 'D'] as opt}
-						<label class="flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors {editingQuestion.correctAnswer === opt ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850'}">
-							<input
-								type="radio"
-								name="correctAnswer"
-								value={opt}
-								bind:group={editingQuestion.correctAnswer}
-								class="accent-emerald-500 w-4 h-4"
-							/>
-							<span class="font-bold text-xs">Opsi {opt}</span>
-						</label>
-					{/each}
-				</div>
-			</div>
-
 			<div class="space-y-1.5">
-				<label for="modal-explanation" class="block text-xs font-bold text-slate-200">
-					Pembahasan Singkat:
+				<label for="correct-answer-input" class="block text-xs font-bold text-slate-200">
+					Uraian Referensi Kunci Jawaban Essay:
 				</label>
 				<textarea
-					id="modal-explanation"
-					name="explanation"
-					rows="3"
-					bind:value={editingQuestion.explanation}
-					placeholder="Tuliskan pembahasan singkat atau poin penting soal ini..."
-					class="w-full p-3 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl text-xs text-slate-100 outline-none leading-relaxed transition-colors"
+					id="correct-answer-input"
+					name="correctAnswer"
+					rows="4"
+					required
+					bind:value={editingQuestion.correctAnswer}
+					placeholder="Tuliskan poin-poin dan uraian jawaban ideal..."
+					class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-xs leading-relaxed focus:border-emerald-500 outline-none resize-y"
 				></textarea>
 			</div>
 
-			<div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
-				<Button type="button" variant="outline" size="sm" onclick={() => editModalOpen = false}>
+			<div class="space-y-1.5">
+				<label for="explanation-input" class="block text-xs font-bold text-slate-200">
+					Pembahasan / Rubrik Penilaian Singkat:
+				</label>
+				<textarea
+					id="explanation-input"
+					name="explanation"
+					rows="3"
+					bind:value={editingQuestion.explanation}
+					placeholder="Penjelasan esensi konsep..."
+					class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-xs leading-relaxed focus:border-emerald-500 outline-none resize-y"
+				></textarea>
+			</div>
+
+			<div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+				<Button type="button" variant="outline" size="sm" onclick={() => (editModalOpen = false)}>
 					Batal
 				</Button>
 				<Button type="submit" variant="primary" size="sm" loading={isSaving}>
-					<Save class="w-3.5 h-3.5 mr-1.5" />
-					<span>Simpan Perubahan</span>
+					Simpan Perubahan
 				</Button>
 			</div>
 		</form>

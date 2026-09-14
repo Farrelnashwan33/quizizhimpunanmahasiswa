@@ -246,9 +246,9 @@
 		<div class="flex items-center justify-between">
 			<h2 class="text-lg font-bold text-white flex items-center gap-2">
 				<FileText class="w-5 h-5 text-emerald-400" />
-				<span>Lembar Rincian Jawaban Peserta vs Kunci Resmi (1–30)</span>
+				<span>Lembar Rincian Jawaban Essay Peserta vs Kunci Resmi (1–30)</span>
 			</h2>
-			<span class="text-xs text-slate-400">30 Butir Soal Pilihan Ganda</span>
+			<span class="text-xs text-slate-400">30 Butir Soal Essay</span>
 		</div>
 
 		{#each detailedQuestions as item}
@@ -272,10 +272,10 @@
 					<div class="flex items-center gap-1.5 text-xs font-bold {isCorrect ? 'text-emerald-400' : isAnswered ? 'text-rose-400' : 'text-slate-500'}">
 						{#if isCorrect}
 							<Check class="w-4 h-4 stroke-[3]" />
-							<span>JAWABAN SESUAI (BENAR)</span>
+							<span>JAWABAN SESUAI (MEMADAI)</span>
 						{:else if isAnswered}
 							<X class="w-4 h-4 stroke-[3]" />
-							<span>PERLU EVALUASI (SALAH)</span>
+							<span>PERLU EVALUASI</span>
 						{:else}
 							<X class="w-4 h-4 stroke-[3]" />
 							<span>TIDAK DIJAWAB</span>
@@ -285,41 +285,44 @@
 
 				<!-- Question Text -->
 				<div>
-					<p class="text-xs uppercase font-bold text-slate-400 mb-1">Pertanyaan #{item.questionNumber}:</p>
+					<p class="text-xs uppercase font-bold text-slate-400 mb-1">Pertanyaan Essay #{item.questionNumber}:</p>
 					<p class="text-sm font-semibold text-slate-100 whitespace-pre-line leading-relaxed">
 						{item.questionText}
 					</p>
 				</div>
 
-				<!-- Options Breakdown -->
-				{#if item.optionA || item.optionB || item.optionC || item.optionD}
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-						{#each [{ key: 'A', text: item.optionA }, { key: 'B', text: item.optionB }, { key: 'C', text: item.optionC }, { key: 'D', text: item.optionD }] as opt}
-							{@const isStudentChoice = studentAns === opt.key}
-							{@const isKey = item.correctAnswer === opt.key}
-							<div class="p-3 rounded-xl border flex items-start gap-2.5 {isKey ? 'bg-emerald-950/70 border-emerald-600 text-emerald-300 font-bold' : isStudentChoice ? 'bg-rose-950/60 border-rose-700 text-rose-300 font-semibold' : 'bg-slate-850 border-slate-800 text-slate-400'}">
-								<span class="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center shrink-0 {isKey ? 'bg-emerald-600 text-white' : isStudentChoice ? 'bg-rose-600 text-white' : 'bg-slate-750 text-slate-300'}">
-									{opt.key}
-								</span>
-								<div class="flex-1 leading-relaxed">
-									<span>{opt.text}</span>
-									{#if isStudentChoice && isKey}
-										<span class="block text-[10px] text-emerald-400 font-bold mt-0.5">✓ Pilihan Mahasiswa (Tepat)</span>
-									{:else if isStudentChoice}
-										<span class="block text-[10px] text-rose-400 font-bold mt-0.5">✗ Pilihan Mahasiswa (Salah)</span>
-									{:else if isKey}
-										<span class="block text-[10px] text-emerald-400 font-bold mt-0.5">★ Kunci Jawaban Benar</span>
-									{/if}
-								</div>
-							</div>
-						{/each}
+				<!-- Student Essay Answer -->
+				<div class="p-4 rounded-xl border {isCorrect ? 'bg-emerald-950/30 border-emerald-700/60 text-emerald-200' : isAnswered ? 'bg-slate-850 border-slate-700 text-slate-200' : 'bg-rose-950/30 border-rose-800/60 text-rose-300'}">
+					<div class="flex items-center justify-between text-xs font-bold mb-2">
+						<span class="{isCorrect ? 'text-emerald-400' : isAnswered ? 'text-slate-300' : 'text-rose-400'}">
+							Jawaban Uraian Mahasiswa:
+						</span>
+						<span class="text-[11px] text-slate-400 font-mono">
+							{studentAns ? `${studentAns.trim().split(/\s+/).filter(Boolean).length} kata • ${studentAns.length} karakter` : 'Belum Dijawab'}
+						</span>
+					</div>
+					<p class="text-xs sm:text-sm whitespace-pre-line leading-relaxed">
+						{studentAns || '— Tidak ada jawaban tertulis —'}
+					</p>
+				</div>
+
+				<!-- Official Reference Key -->
+				{#if item.correctAnswer}
+					<div class="p-4 rounded-xl bg-slate-850/80 border border-emerald-900/60 text-xs leading-relaxed space-y-1.5">
+						<div class="flex items-center gap-1.5 text-emerald-400 font-bold">
+							<KeyRound class="w-3.5 h-3.5" />
+							<span>Referensi Kunci Jawaban Resmi:</span>
+						</div>
+						<p class="text-slate-200 whitespace-pre-line">
+							{item.correctAnswer}
+						</p>
 					</div>
 				{/if}
 
 				<!-- Explanation -->
 				{#if item.explanation}
-					<div class="p-3 bg-slate-850/80 rounded-xl border border-slate-800 text-xs text-slate-300">
-						<strong class="text-emerald-400">Pembahasan:</strong> {item.explanation}
+					<div class="p-3 bg-slate-850/50 rounded-xl border border-slate-800 text-xs text-slate-400">
+						<strong class="text-emerald-400">Pembahasan & Rubrik:</strong> {item.explanation}
 					</div>
 				{/if}
 			</div>

@@ -1138,11 +1138,6 @@ export async function submitQuizAttempt(data: {
 			console.warn('Prisma error during submit:', prismaErr);
 		}
 	}
-			}
-		} catch (prismaErr) {
-			console.warn('Prisma error during submit:', prismaErr);
-		}
-	}
 
 	if (isSupabaseConfigured) {
 		try {
@@ -1362,6 +1357,155 @@ export async function gradeQuizAttempt(data: {
 		success: true,
 		attemptId,
 		score: roundedScore,
-		message: 'Penilaian essai berhasil disimpan.'
+		message: 'Penilaian berhasil disimpan.'
+	};
+}
+
+/**
+ * 10. RECALCULATE & NORMALIZE SINGLE ATTEMPT SCORE
+ * Evaluates all 30 multiple choice questions automatically and accurately against the official key.
+ */
+export async function recalculateAttemptById(attemptIdOrNim: string) {
+	const detail = await getQuizAttemptById(attemptIdOrNim);
+	if (!detail || !detail.attempt) {
+		return { success: false, error: 'Data pengerjaan tidak ditemukan.' };
+	}
+
+	const { attempt, detailedQuestions } = detail;
+	let correctCount = 0;
+	let answeredCount = 0;
+
+	const evaluatedAnswers = detailedQuestions.map((item) => {
+		const evalRes = evaluateQuestionAnswer(item.questionNumber, item.studentAnswer);
+		if (item.studentAnswer && String(item.studentAnswer).trim() !== '') {
+			answeredCount++;
+			if (evalRes.isCorrect) correctCount++;
+		}
+		return {
+			questionNumber: item.questionNumber,
+			questionId: item.question?.id,
+			studentAnswer: evalRes.normalizedChoice || item.studentAnswer,
+			isCorrect: evalRes.isCorrect
+		};
+	});
+
+	const totalQuestions = OFFICIAL_30_QUESTIONS.length;
+	const wrongCount = totalQuestions - correctCount;
+	const score = Math.min(100, Math.round((correctCount / totalQuestions) * 100));
+
+	// 1. Update Prisma
+	if (isDatabaseConfigured && attempt.id.includes('-')) {
+		try {
+			await prisma.quizAttempt.update({
+				where: { id: attempt.id },
+				data: {
+					score,
+					correctCount,
+					wrongCount,
+					totalQuestions,
+					status: 'completed'
+				}
+			});
+
+			for (const ans of evaluatedAnswers) {
+				if (ans.questionId && isUuid(ans.questionId)) {
+					try {
+						await prisma.answer.updateMany({
+							where: {
+								attemptId: attempt.id,
+								questionId: ans.questionId
+							},
+							data: {
+								selectedAnswer: ans.studentAnswer || undefined,
+								isCorrect: ans.isCorrect
+							}
+						});
+					} catch (e) {}
+				}
+			}
+		} catch (prismaErr) {
+			console.warn('Prisma recalculate notice:', prismaErr);
+		}
+	}
+
+	// 2. Update Supabase
+	if (isSupabaseConfigured && attempt.id.includes('-')) {
+		try {
+			await supabaseAdmin
+				.from('quiz_attempts')
+				.update({
+					score,
+					correct_count: correctCount,
+					wrong_count: wrongCount,
+					total_questions: totalQuestions,
+					status: 'completed'
+				})
+				.eq('id', attempt.id);
+
+			for (const ans of evaluatedAnswers) {
+				if (ans.questionId && isUuid(ans.questionId)) {
+					try {
+						await supabaseAdmin
+							.from('answers')
+							.update({
+								selected_answer: ans.studentAnswer || undefined,
+								is_correct: ans.isCorrect
+							})
+							.eq('attempt_id', attempt.id)
+							.eq('question_id', ans.questionId);
+					} catch (e) {}
+				}
+			}
+		} catch (supaErr) {
+			console.warn('Supabase recalculate notice:', supaErr);
+		}
+	}
+
+	// 3. Update Memory attempts
+	const memoryAttempts = getMemoryAttempts();
+	const existing = memoryAttempts.find(
+		(a) => a.id === attempt.id || (attempt.student?.nim && a.student?.nim === attempt.student?.nim)
+	);
+	if (existing) {
+		existing.score = score;
+		existing.correctCount = correctCount;
+		existing.wrongCount = wrongCount;
+		existing.status = 'completed';
+		recordAttempt(existing);
+	}
+
+	return {
+		success: true,
+		attemptId: attempt.id,
+		score,
+		correctCount,
+		wrongCount,
+		totalQuestions,
+		answeredCount,
+		passed: score >= 65
+	};
+}
+
+/**
+ * 11. RECALCULATE ALL ATTEMPTS (ONE-CLICK MASS NORMALIZATION)
+ */
+export async function recalculateAllAttempts() {
+	const allAttempts = await fetchAllRawDataFromDatabase();
+	let updatedCount = 0;
+
+	for (const att of allAttempts) {
+		try {
+			const res = await recalculateAttemptById(att.id);
+			if (res.success) updatedCount++;
+		} catch (e) {
+			console.warn(`Failed to recalculate attempt ${att.id}:`, e);
+		}
+	}
+
+	return {
+		success: true,
+		totalAttempts: allAttempts.length,
+		updatedCount,
+		message: `Berhasil menghitung ulang nilai ${updatedCount} dari ${allAttempts.length} data pengerjaan peserta secara akurat.`
 	};
 }

@@ -17,11 +17,14 @@
 		Clock,
 		ArrowUpDown,
 		User,
-		RefreshCw
+		RefreshCw,
+		Sparkles
 	} from 'lucide-svelte';
 
 	let { data } = $props();
 	let isRefreshing = $state(false);
+	let isRecalculating = $state(false);
+	let syncMessage = $state<string | null>(null);
 
 	async function handleRefresh() {
 		isRefreshing = true;
@@ -31,6 +34,36 @@
 			setTimeout(() => {
 				isRefreshing = false;
 			}, 400);
+		}
+	}
+
+	async function handleRecalculateAll() {
+		if (!confirm('Hitung ulang semua nilai peserta secara otomatis berdasarkan kunci jawaban 30 soal pilihan ganda?')) {
+			return;
+		}
+
+		isRecalculating = true;
+		syncMessage = null;
+		try {
+			const res = await fetch('/api/admin/recalculate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+			const result = await res.json();
+			if (result.success) {
+				syncMessage = result.message || 'Semua nilai berhasil dihitung ulang secara akurat!';
+				await invalidateAll();
+			} else {
+				alert('Gagal: ' + (result.error || 'Terjadi kesalahan'));
+			}
+		} catch (err: any) {
+			alert('Terjadi kesalahan jaringan saat menghitung ulang.');
+		} finally {
+			isRecalculating = false;
+			setTimeout(() => {
+				syncMessage = null;
+			}, 5000);
 		}
 	}
 
@@ -82,6 +115,19 @@
 </svelte:head>
 
 <div class="space-y-6">
+	<!-- Flash Message -->
+	{#if syncMessage}
+		<div class="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs sm:text-sm font-semibold flex items-center justify-between shadow-lg animate-in fade-in">
+			<div class="flex items-center gap-2">
+				<Sparkles class="w-4 h-4 text-emerald-400" />
+				<span>{syncMessage}</span>
+			</div>
+			<button type="button" onclick={() => (syncMessage = null)} class="text-emerald-400 hover:text-emerald-200">
+				✕
+			</button>
+		</div>
+	{/if}
+
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
 		<div>
@@ -97,7 +143,18 @@
 			</p>
 		</div>
 
-		<div class="flex items-center gap-2.5">
+		<div class="flex flex-wrap items-center gap-2.5">
+			<button
+				type="button"
+				onclick={handleRecalculateAll}
+				disabled={isRecalculating}
+				class="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-bold border border-indigo-500/40 shadow-md shadow-indigo-900/20 transition-all cursor-pointer disabled:opacity-50"
+				title="Hitung ulang otomatis semua nilai berdasarkan 30 kunci jawaban resmi"
+			>
+				<Sparkles class="w-3.5 h-3.5 mr-1.5 {isRecalculating ? 'animate-spin' : ''}" />
+				<span>{isRecalculating ? 'Menghitung Nilai...' : 'Hitung Ulang Nilai Otomatis'}</span>
+			</button>
+
 			<button
 				type="button"
 				onclick={handleRefresh}
@@ -115,7 +172,7 @@
 				class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
 			>
 				<Download class="w-4 h-4 mr-2" />
-				<span>Export Data (CSV / Excel)</span>
+				<span>Export CSV</span>
 			</a>
 		</div>
 	</div>

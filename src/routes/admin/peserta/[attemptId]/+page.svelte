@@ -36,12 +36,40 @@
 	let manualScore = $state<number>(0);
 	let feedbackText = $state<string>('');
 	let isSavingGrade = $state(false);
+	let isRecalculating = $state(false);
 
 	$effect(() => {
 		if (attempt?.score !== null && attempt?.score !== undefined) {
 			manualScore = attempt.score;
 		}
 	});
+
+	async function handleAutoRecalculateSingle() {
+		isRecalculating = true;
+		try {
+			const res = await fetch('/api/admin/recalculate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ attemptId: attempt.id })
+			});
+			const result = await res.json();
+			if (result.success) {
+				toasts.success(result.message || 'Nilai berhasil dihitung ulang!');
+				if (result.data?.score !== undefined) {
+					manualScore = result.data.score;
+				}
+				setTimeout(() => {
+					window.location.reload();
+				}, 600);
+			} else {
+				toasts.error('Gagal: ' + (result.error || 'Terjadi kesalahan'));
+			}
+		} catch (err: any) {
+			toasts.error('Terjadi kesalahan jaringan.');
+		} finally {
+			isRecalculating = false;
+		}
+	}
 
 	const correctCount = $derived(detailedQuestions.filter((d: any) => d.isCorrect).length);
 	const wrongCount = $derived(detailedQuestions.length - correctCount);
@@ -78,24 +106,29 @@
 					{student?.fullName}
 				</h1>
 				<div class="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-2">
-					<span>NIM: <strong class="text-emerald-400 font-mono text-sm">{student?.nim}</strong></span>
+					<span class="flex items-center gap-1.5">
+						<Hash class="w-3.5 h-3.5 text-emerald-400" />
+						NIM: <strong class="text-white font-mono">{student?.nim}</strong>
+					</span>
 					<span>•</span>
-					<span>Prodi: <strong class="text-slate-200">{student?.programStudi}</strong></span>
+					<span class="flex items-center gap-1.5">
+						<BookOpen class="w-3.5 h-3.5 text-blue-400" />
+						Prodi: <strong class="text-white">{student?.programStudi}</strong>
+					</span>
 					<span>•</span>
-					<span>Email: <span class="font-mono">{student?.email}</span></span>
-					{#if student?.whatsapp}
-						<span>•</span>
-						<span>WhatsApp: <span class="font-mono text-emerald-400">{student.whatsapp}</span></span>
-					{/if}
+					<span class="flex items-center gap-1.5">
+						<Mail class="w-3.5 h-3.5 text-purple-400" />
+						{student?.email}
+					</span>
 				</div>
 			</div>
 
 			<!-- Score Badge -->
-			<div class="shrink-0 p-4 rounded-2xl bg-slate-850 border border-slate-750 text-center min-w-[150px]">
-				<p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Nilai Akhir</p>
-				<div class="my-1">
-					<span class="text-4xl font-black {isPassed ? 'text-emerald-400' : 'text-rose-400'} font-mono">{manualScore}</span>
-					<span class="text-xs text-slate-500">/100</span>
+			<div class="flex flex-col items-end justify-center px-6 py-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 shrink-0">
+				<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nilai Akhir Quiz</span>
+				<div class="text-3xl sm:text-4xl font-extrabold text-white font-mono tracking-tight my-0.5">
+					<span class="{isPassed ? 'text-emerald-400' : 'text-rose-400'}">{manualScore}</span>
+					<span class="text-lg text-slate-500 font-normal">/100</span>
 				</div>
 				<span class="text-xs font-bold {isPassed ? 'text-emerald-400' : 'text-rose-400'}">
 					{isPassed ? 'LULUS KADERISASI' : 'BELUM MEMENUHI KKM'}
@@ -133,9 +166,20 @@
 		<div class="flex items-center justify-between pb-3 border-b border-slate-800">
 			<div class="flex items-center gap-2">
 				<Award class="w-5 h-5 text-emerald-400" />
-				<h2 class="text-base font-bold text-white">Panel Penyesuaian Nilai Admin (Opsional)</h2>
+				<h2 class="text-base font-bold text-white">Panel Penilaian & Koreksi Otomatis</h2>
 			</div>
-			<Badge variant="emerald" size="sm">Standar KKM: 65</Badge>
+			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					onclick={handleAutoRecalculateSingle}
+					disabled={isRecalculating}
+					class="inline-flex items-center px-3 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+				>
+					<Sparkles class="w-3.5 h-3.5 mr-1.5 {isRecalculating ? 'animate-spin' : ''}" />
+					<span>{isRecalculating ? 'Menghitung...' : 'Hitung Ulang Otomatis'}</span>
+				</button>
+				<Badge variant="emerald" size="sm">Standar KKM: 65</Badge>
+			</div>
 		</div>
 
 		<form
@@ -158,7 +202,7 @@
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 				<div class="space-y-1.5">
 					<label for="score-input" class="block text-xs font-bold text-slate-200">
-						Input Skor Akhir (0–100):
+						Skor Akhir (0–100):
 					</label>
 					<input
 						id="score-input"
@@ -182,7 +226,7 @@
 						type="text"
 						name="feedback"
 						bind:value={feedbackText}
-						placeholder="Contoh: Pemahaman materi baik, tingkatkan komitmen waktu..."
+						placeholder="Contoh: Pemahaman materi sangat baik, selamat..."
 						class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-xs focus:border-emerald-500 outline-none"
 					/>
 				</div>
